@@ -1,0 +1,85 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              android:background="@drawable/sky"
+              android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/edt_result_text"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="80dp"
+        android:gravity="center"
+        android:text="Speak Result"
+        android:textColor="#FF9224"
+        android:textSize="40px"/>
+
+    <Button
+        android:id="@+id/btn_take_call"
+        android:layout_width="265dp"
+        android:layout_height="67dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="30dp"
+        android:background="@drawable/boder"
+        android:text="电 话"
+        android:textColor="#FFFFFF"
+        android:textSize="60px"/>
+
+    <Button
+        android:id="@+id/btn_send_messages"
+        android:layout_width="265dp"
+        android:layout_height="67dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/boder"
+        android:text="短 信"
+        android:textColor="#FFFFFF"
+        android:textSize="60px"/>
+
+    <Button
+        android:id="@+id/btn_navigation"
+        android:layout_width="265dp"
+        android:layout_height="67dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/boder"
+        android:text="导 航"
+        android:textColor="#FFFFFF"
+        android:textSize="60px"/>
+
+
+    <RelativeLayout android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" >
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_web"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/boder"
+                android:text="官网"
+                android:textColor="#FFFFFF"/>
+
+            <Button
+                android:id="@+id/settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/boder"
+                android:text="设置"
+                android:layout_marginLeft="24dp"
+                android:textColor="#FFFFFF"/>
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+
+</LinearLayout>
