@@ -77,6 +77,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private WakeUpRecognizer mWakeUpRecognizer = null;
     // 唤醒震动
     private Vibrator mVibrator;
+    // 是否注册
+    private boolean isReceivered = false;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -225,6 +227,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mAudioManager.startBluetoothSco();// 蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
         // 注册监听广播；
         registerReceiver(mReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
+        isReceivered = true;
     }
 
     private Receiver mReceiver = new Receiver();
@@ -426,7 +429,9 @@ public class MainActivity extends Activity implements OnClickListener {
         mSpeechRecognizer.cancel();
         mSpeechRecognizer.destroy();
         mWakeUpRecognizer.cancel();
-        unregisterReceiver(mReceiver);
+        if (isReceivered) {
+            unregisterReceiver(mReceiver);
+        }
         closeBluetoothScoOn();
     }
 
