@@ -11,7 +11,6 @@ import android.text.TextUtils;
 
 import com.aos.BtSound.model.ContactInfo;
 
-
 /**
 *类名：Util.java
 *注释：获取联系人列表
