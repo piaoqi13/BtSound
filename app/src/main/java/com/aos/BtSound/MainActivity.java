@@ -5,6 +5,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -22,10 +23,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.aos.BtSound.contact.Util;
+import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
-import com.aos.BtSound.model.ContactInfo;
 import com.aos.BtSound.preference.Config;
+import com.aos.BtSound.preference.Settings;
 import com.aos.BtSound.setting.IatSettings;
 import com.aos.BtSound.util.JsonParser;
 import com.iflytek.cloud.ErrorCode;
@@ -41,8 +42,6 @@ import com.iflytek.cloud.ui.RecognizerDialogListener;
 import com.iflytek.cloud.util.ContactManager;
 import com.iflytek.cloud.util.ContactManager.ContactListener;
 
-import java.util.List;
-
 import cn.yunzhisheng.common.USCError;
 import cn.yunzhisheng.wakeup.basic.WakeUpRecognizer;
 import cn.yunzhisheng.wakeup.basic.WakeUpRecognizerListener;
@@ -55,30 +54,20 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button mBtnWeb = null;
     private Button mBtnSettings = null;
     private EditText mEdtTransformResult = null;
-    // 语音听写对象
-    private SpeechRecognizer mSpeechRecognizer = null;
-    // 语音听写对话框
-    private RecognizerDialog mRecognizerDialog = null;
-    // 存储对象
-    private SharedPreferences mSharedPreferences = null;
-    // 音频管理器
-    private AudioManager mAudioManager = null;
-    private BluetoothAdapter mBluetoothAdapter = null;
-    // 控制信息
-    private boolean mIsStarted = false;
+    private Handler mHandler = new Handler();
 
-    private Util mUtil = null;
-    private List<ContactInfo> mContacts = null;
-    // 短信内容
-    private String mSmsBody = null;
+    private SpeechRecognizer mSpeechRecognizer = null;// 语音对象
+    private SharedPreferences mSharedPreferences = null;// 存储对象
+    private AudioManager mAudioManager = null;// 音频管理类
+    private BluetoothAdapter mBluetoothAdapter = null;// 蓝牙适配器
+    private RecognizerDialog mRecognizerDialog = null;// 语音对话框
+    private String mSmsBody = null;// 短信内容
     private SoundPool soundPool = null;
-    private boolean mIsFirstTime = false;
-    // 唤醒对象
-    private WakeUpRecognizer mWakeUpRecognizer = null;
-    // 唤醒震动
-    private Vibrator mVibrator;
-    // 是否注册
-    private boolean isReceivered = false;
+    private boolean mIsStarted = false;
+    private boolean mIsFirstTime = false;// 是否第一次启动
+    private WakeUpRecognizer mWakeUpRecognizer = null;// 唤醒对象
+    private Vibrator mVibrator = null;// 唤醒震动
+    private boolean isReceivered = false;// 广播标识
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,14 +77,12 @@ public class MainActivity extends Activity implements OnClickListener {
         mContext = this;
         Intent in = getIntent();
         if (in != null && in.getExtras() != null) {
-            mIsFirstTime = in.getExtras().getBoolean(Config.Keyname.IS_FIRST_TIME);
+            mIsFirstTime = in.getExtras().getBoolean(Config.IS_FIRST_TIME);
         }
         initView();
         setListener();
         // 获取联系人信息
-        mUtil = new Util(mContext);
-        mUtil.getPhoneContacts();
-        mContacts = mUtil.getContactInfo();
+        ObtainContactsUtil.getInstance(mContext).getPhoneContacts();
         if (!mIsFirstTime)
             mHandler.postDelayed(new Runnable() {
                 public void run() {
@@ -113,13 +100,15 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnWeb = (Button) findViewById(R.id.btn_web);
         mBtnSettings = (Button) findViewById(R.id.settings);
         mEdtTransformResult = (EditText) findViewById(R.id.edt_result_text);
-        // 初始化
+        // 初始化语音模块
         mSpeechRecognizer = SpeechRecognizer.createRecognizer(this, mInitListener);
         mRecognizerDialog = new RecognizerDialog(this, mInitListener);
         mSharedPreferences = getSharedPreferences(IatSettings.PREFER_NAME, Activity.MODE_PRIVATE);
-        // 上传联系人
-        ContactManager mgr = ContactManager.createManager(mContext, mContactListener);
-        mgr.asyncQueryAllContactsName();
+        // 第一次上传联系人
+        if (Settings.getBoolean(Config.IS_FIRST_TIME, true, false)) {
+            ContactManager mgr = ContactManager.createManager(mContext, mContactListener);
+            mgr.asyncQueryAllContactsName();
+        }
     }
 
     private void setListener() {
@@ -176,8 +165,6 @@ public class MainActivity extends Activity implements OnClickListener {
         });
     }
 
-    private Handler mHandler = new Handler();
-
     public void playSound(int id) {
         AudioManager am = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
         float audioMaxVolumn = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
@@ -192,6 +179,7 @@ public class MainActivity extends Activity implements OnClickListener {
         boolean isShowDialogII = mSharedPreferences.getBoolean(getString(R.string.pref_key_iat_show), true);
         if (isShowDialogII) {
             mRecognizerDialog.setListener(recognizerDialogListener);
+            mWakeUpRecognizer.stop();
             mRecognizerDialog.show();
         } else {
             int errorCode = mSpeechRecognizer.startListening(recognizerListener);
@@ -200,6 +188,14 @@ public class MainActivity extends Activity implements OnClickListener {
                 toastII.show();
             }
         }
+
+        mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                mWakeUpRecognizer.start();
+            }
+        });
+
     }
 
     /**
@@ -225,7 +221,7 @@ public class MainActivity extends Activity implements OnClickListener {
         DebugLog.d(DebugLog.TAG, "MainActivity:startRecording " + "系统支持蓝牙录音");
         mAudioManager.stopBluetoothSco();
         mAudioManager.startBluetoothSco();// 蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
-        // 注册监听广播；
+        // 注册监听广播
         registerReceiver(mReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
         isReceivered = true;
     }
@@ -277,7 +273,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
         @Override
         public void onError(SpeechError error) {
-            Log.i("CollinWang", "Information=" + error.getPlainDescription(true));
+            DebugLog.i("CollinWang", "Information=" + error.getPlainDescription(true));
         }
 
         @Override
@@ -303,28 +299,28 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private RecognizerDialogListener recognizerDialogListener = new RecognizerDialogListener() {
         public void onResult(RecognizerResult result, boolean isLast) {
-            Log.i("CollinWang", "RecognizerResult=" + result.getResultString());
+            DebugLog.i("CollinWang", "RecognizerResult=" + result.getResultString());
             String text = JsonParser.parseIatResult(result.getResultString());
             mEdtTransformResult.append(text);
             mEdtTransformResult.setSelection(mEdtTransformResult.length());
 
-            if (mContacts != null) {// 联系人不是空
+            if (VoiceCellApplication.mContacts != null) {// 联系人不是空
                 if (text.contains("打电话")) {// 是打电话
-                    for (int i = 0; i < mContacts.size(); i++) {
-                        if (text.contains(mContacts.get(i).getName())) {
-                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + mContacts.get(i).getPhoneNumber()));
+                    for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                        if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                             MainActivity.this.startActivity(intent);
-                            return;
+                            break;
                         }
                     }
                 } else if (text.contains("发短信")) {// 发短信
-                    for (int i = 0; i < mContacts.size(); i++) {
-                        if (text.contains(mContacts.get(i).getName())) {
-                            Uri smsToUri = Uri.parse("smsto:" + mContacts.get(i).getPhoneNumber());
+                    for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                        if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                            Uri smsToUri = Uri.parse("smsto:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber());
                             Intent intent = new Intent(Intent.ACTION_SENDTO, smsToUri);
                             intent.putExtra("sms_body", mSmsBody);
                             MainActivity.this.startActivity(intent);
-                            return;
+                            break;
                         }
                     }
                 } else {// 拿到短信内容
@@ -333,11 +329,14 @@ public class MainActivity extends Activity implements OnClickListener {
             } else {
                 Log.i("CollinWang", "没有联系人");
             }
+            // 科大讯飞结束云知声走起
+            mWakeUpRecognizer.start();
         }
 
         public void onError(SpeechError error) {
-            Log.i("CollinWang", "Information=" + error.getPlainDescription(true));
+            DebugLog.i("CollinWang", "Information=" + error.getPlainDescription(true));
         }
+
     };
 
     public void setParam() {
@@ -375,50 +374,47 @@ public class MainActivity extends Activity implements OnClickListener {
             if (error != null) {
                 //ToDo
             } else {
-                Log.i("CollinWang", "上传联系人成功");
+                DebugLog.i("CollinWang", "上传联系人成功");
             }
         }
     };
 
-    /**
-     * 初始化本地离线唤醒
-     */
+    // 初始化本地离线唤醒
     private void initWakeUp() {
         mWakeUpRecognizer = new WakeUpRecognizer(this, Config.appKey);
         mWakeUpRecognizer.setListener(new WakeUpRecognizerListener() {
 
             @Override
             public void onWakeUpRecognizerStart() {
-                Log.i("CollinWang", "WakeUpRecognizer onRecordingStart");
-                Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
+                DebugLog.i("CollinWang", "语音唤醒已开始");
             }
 
             @Override
             public void onWakeUpError(USCError error) {
                 if (error != null) {
-                    Toast.makeText(MainActivity.this, "异常信息=" + error.toString(), Toast.LENGTH_SHORT).show();
+                    DebugLog.i("CollinWang", "Information=" + error.toString());
                 }
             }
 
             @Override
             public void onWakeUpRecognizerStop() {
-                Log.i("CollinWang", "WakeUpRecognizer onRecordingStop");
-                Toast.makeText(MainActivity.this, "语音唤醒已停止", Toast.LENGTH_SHORT).show();
+                DebugLog.i("CollinWang", "语音唤醒已停止");
             }
 
             @Override
             public void onWakeUpResult(boolean succeed, String text, float score) {
                 if (succeed) {
                     mVibrator.vibrate(300);
-                    Toast.makeText(MainActivity.this, "语音唤醒成功" + score, Toast.LENGTH_SHORT).show();
+                    DebugLog.i("CollinWang", "语音唤醒成功");
+                    // 云知声结束停止
+                    mWakeUpRecognizer.stop();
+                    showSpeakDialog();
                 }
             }
         });
     }
 
-    /**
-     * 启动语音唤醒
-     */
+    // 启动语音唤醒
     protected void wakeUpStart() {
         mWakeUpRecognizer.start();
     }

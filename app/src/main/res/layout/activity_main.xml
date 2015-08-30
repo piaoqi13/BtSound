@@ -1,9 +1,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:tools="http://schemas.android.com/tools"
-              android:layout_width="fill_parent"
-              android:layout_height="fill_parent"
-              android:background="@drawable/sky"
-              android:orientation="vertical">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@drawable/sky"
+    android:orientation="vertical">
 
     <EditText
         android:id="@+id/edt_result_text"
@@ -14,7 +14,7 @@
         android:gravity="center"
         android:text="Speak Result"
         android:textColor="#FF9224"
-        android:textSize="40px"/>
+        android:textSize="40px" />
 
     <Button
         android:id="@+id/btn_take_call"
@@ -24,8 +24,8 @@
         android:layout_marginTop="30dp"
         android:background="@drawable/boder"
         android:text="电 话"
-        android:textColor="#FFFFFF"
-        android:textSize="60px"/>
+        android:textColor="@drawable/tv_click_text_selector"
+        android:textSize="60px" />
 
     <Button
         android:id="@+id/btn_send_messages"
@@ -35,8 +35,8 @@
         android:layout_marginTop="8dp"
         android:background="@drawable/boder"
         android:text="短 信"
-        android:textColor="#FFFFFF"
-        android:textSize="60px"/>
+        android:textColor="@drawable/tv_click_text_selector"
+        android:textSize="60px" />
 
     <Button
         android:id="@+id/btn_navigation"
@@ -46,13 +46,14 @@
         android:layout_marginTop="8dp"
         android:background="@drawable/boder"
         android:text="导 航"
-        android:textColor="#FFFFFF"
-        android:textSize="60px"/>
+        android:textColor="@drawable/tv_click_text_selector"
+        android:textSize="60px" />
 
 
-    <RelativeLayout android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp" >
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -66,20 +67,19 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/boder"
                 android:text="官网"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@drawable/tv_click_text_selector" />
 
             <Button
                 android:id="@+id/settings"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="24dp"
                 android:background="@drawable/boder"
                 android:text="设置"
-                android:layout_marginLeft="24dp"
-                android:textColor="#FFFFFF"/>
+                android:textColor="@drawable/tv_click_text_selector" />
 
         </LinearLayout>
 
     </RelativeLayout>
-
 
 </LinearLayout>

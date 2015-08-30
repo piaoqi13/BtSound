@@ -1,9 +1,15 @@
 package com.aos.BtSound;
 
 import android.app.Application;
+import android.content.Context;
 
+import com.aos.BtSound.model.ContactInfo;
+import com.aos.BtSound.preference.Settings;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechUtility;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *类名：VoiceCellApplication.java
@@ -12,14 +18,21 @@ import com.iflytek.cloud.SpeechUtility;
  *作者：王超
  */
 public class VoiceCellApplication extends Application {
+	public static Context mApplication = null;
+	// 装载联系人信息
+	public static List<ContactInfo> mContacts = new ArrayList<ContactInfo>();
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		// 初始化语音模块
+		mApplication = this;
+		// 初始化科大讯飞模块
 		StringBuffer param = new StringBuffer();
 		param.append("appid=4fd96987");
 		param.append(",");
 		param.append(SpeechConstant.ENGINE_MODE+"="+SpeechConstant.MODE_MSC);
 		SpeechUtility.createUtility(this, param.toString());
+		// 数据存储初始化
+		Settings.initPreferences(mApplication);
 	}
 }

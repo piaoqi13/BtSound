@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent">
-    <solid android:color="#00000000"/>
-    <stroke android:width="0.5dp" android:color="#CCCCFF"/>
-    <corners android:topLeftRadius="30dp"
-        android:topRightRadius="30dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <solid android:color="#00000000" />
+    <stroke
+        android:width="0.5dp"
+        android:color="#CCCCFF" />
+    <corners
         android:bottomLeftRadius="30dp"
-        android:bottomRightRadius="30dp"  />
+        android:bottomRightRadius="30dp"
+        android:topLeftRadius="30dp"
+        android:topRightRadius="30dp" />
 </shape>
 
 

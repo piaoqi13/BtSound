@@ -8,7 +8,7 @@
     <string name="setting">设置</string>
     <string name="transform_result">语音听写转换结果</string>
     <string name="app_id">4fd96987</string>
-	
+
     <string name="text_begin">请开始说话&#8230;</string>
     <string name="text_upload_contacts">上传联系人</string>
     <string name="text_upload_userwords">上传用户词表</string>
