@@ -41,6 +41,7 @@ import com.iflytek.cloud.ui.RecognizerDialog;
 import com.iflytek.cloud.ui.RecognizerDialogListener;
 import com.iflytek.cloud.util.ContactManager;
 import com.iflytek.cloud.util.ContactManager.ContactListener;
+import com.umeng.update.UmengUpdateAgent;
 
 import cn.yunzhisheng.common.USCError;
 import cn.yunzhisheng.wakeup.basic.WakeUpRecognizer;
@@ -91,6 +92,8 @@ public class MainActivity extends Activity implements OnClickListener {
             }, 1000);
         initWakeUp();
         wakeUpStart();
+        // 友盟更新初始化
+        UmengUpdateAgent.update(this);
     }
 
     private void initView() {
