@@ -57,18 +57,18 @@ public class MainActivity extends Activity implements OnClickListener {
     private EditText mEdtTransformResult = null;
     private Handler mHandler = new Handler();
 
-    private SpeechRecognizer mSpeechRecognizer = null;// 语音对象
+    private SpeechRecognizer mSpeechRecognizer = null;  // 语音对象
     private SharedPreferences mSharedPreferences = null;// 存储对象
-    private AudioManager mAudioManager = null;// 音频管理类
-    private BluetoothAdapter mBluetoothAdapter = null;// 蓝牙适配器
-    private RecognizerDialog mRecognizerDialog = null;// 语音对话框
-    private String mSmsBody = null;// 短信内容
+    private AudioManager mAudioManager = null;          // 音频管理类
+    private BluetoothAdapter mBluetoothAdapter = null;  // 蓝牙适配器
+    private RecognizerDialog mRecognizerDialog = null;  // 语音对话框
+    private String mSmsBody = null;                     // 短信内容
     private SoundPool soundPool = null;
     private boolean mIsStarted = false;
-    private boolean mIsFirstTime = false;// 是否第一次启动
-    private WakeUpRecognizer mWakeUpRecognizer = null;// 唤醒对象
-    private Vibrator mVibrator = null;// 唤醒震动
-    private boolean isReceivered = false;// 广播标识
+    private boolean mIsFirstTime = false;               // 是否第一次启动
+    private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
+    private Vibrator mVibrator = null;                  // 唤醒震动
+    private boolean isReceivered = false;               // 广播标识
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,6 +82,7 @@ public class MainActivity extends Activity implements OnClickListener {
         }
         initView();
         setListener();
+        // 获取联系人信息
         // 获取联系人信息
         ObtainContactsUtil.getInstance(mContext).getPhoneContacts();
         if (!mIsFirstTime)
