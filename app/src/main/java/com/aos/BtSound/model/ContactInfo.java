@@ -1,35 +1,35 @@
 package com.aos.BtSound.model;
 
 /**
- *类名：ContactInfo.java
- *注释：联系人信息实体类
- *日期：2015年8月6日
- *作者：王超
+ * 类名：ContactInfo.java
+ * 注释：联系人信息实体类
+ * 日期：2015年8月6日
+ * 作者：王超
  */
 public class ContactInfo {
-	private String name = null;
-	private String phoneNumber = null;
+    private String name = null;
+    private String phoneNumber = null;
 
-	public ContactInfo(String name, String phoneNumber) {
-		super();
-		this.name = name;
-		this.phoneNumber = phoneNumber;
-	}
+    public ContactInfo(String name, String phoneNumber) {
+        super();
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public String getPhoneNumber() {
-		return phoneNumber;
-	}
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
 
-	public void setPhoneNumber(String phoneNumber) {
-		this.phoneNumber = phoneNumber;
-	}
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
 
 }

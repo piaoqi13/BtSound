@@ -56,6 +56,14 @@
 
         </activity>
 
+        <!-- 电话广播CollinWang -->
+        <receiver android:name="com.aos.BtSound.receiver.PhoneReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name="com.aos.BtSound.MainActivity"
             android:icon="@mipmap/ic_launcher"
