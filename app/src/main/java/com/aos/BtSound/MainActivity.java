@@ -65,34 +65,33 @@ public class MainActivity extends Activity implements OnClickListener {
     private String mSmsBody = null;                     // 短信内容
     private SoundPool soundPool = null;
     private boolean mIsStarted = false;
-    private boolean mIsFirstTime = false;               // 是否第一次启动
+
     private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
     private Vibrator mVibrator = null;                  // 唤醒震动
     private boolean isReceivered = false;               // 广播标识
 
+    private int mStartCount = 0;                        // 控制信息，尝试打开蓝牙麦克风次数；
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
         mContext = this;
-        Intent in = getIntent();
-        if (in != null && in.getExtras() != null) {
-            mIsFirstTime = in.getExtras().getBoolean(Config.IS_FIRST_TIME);
-        }
+
         initView();
         setListener();
-        // 获取联系人信息
+
         // 获取联系人信息
         ObtainContactsUtil.getInstance(mContext).getPhoneContacts();
-        if (!mIsFirstTime)
-            mHandler.postDelayed(new Runnable() {
-                public void run() {
-                    blePrepare();
-                }
-            }, 1000);
+
+        // 准备蓝牙语音
+        blePrepare();
+
         initWakeUp();
         wakeUpStart();
+
         // 友盟更新初始化
         UmengUpdateAgent.update(this);
     }
@@ -127,10 +126,12 @@ public class MainActivity extends Activity implements OnClickListener {
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_take_call:
-                showSpeakDialog();
+                Toast.makeText(MainActivity.this, "正在准备语音", Toast.LENGTH_LONG).show();
+                blePrepare();
                 break;
             case R.id.btn_send_messages:
-                showSpeakDialog();
+                Toast.makeText(MainActivity.this, "正在准备语音", Toast.LENGTH_LONG).show();
+                blePrepare();
                 break;
             case R.id.btn_navigation:
                 Toast.makeText(MainActivity.this, "敬请期待", Toast.LENGTH_SHORT).show();
@@ -151,23 +152,34 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     private void showSoundHint() {
+
         mIsStarted = true;
         soundPool = new SoundPool(10, AudioManager.STREAM_SYSTEM, 5);
         soundPool.load(this, R.raw.bootaudio, 1);
+
+//        if(mAudioManager.isSpeakerphoneOn())
+//            mAudioManager.setSpeakerphoneOn(false);
+
         soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
             public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                 if (status == 0) {
+
                     playSound(sampleId);
                     mHandler.postDelayed(new Runnable() {
                         public void run() {
                             mIsStarted = false;
                             showSpeakDialog();
+
+//                            if(!mAudioManager.isSpeakerphoneOn())
+//                                mAudioManager.setSpeakerphoneOn(true);
+
                         }
                     }, 4000);
                 }
             }
         });
     }
+
 
     public void playSound(int id) {
         AudioManager am = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
@@ -203,12 +215,25 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     /**
+     * By Linky
      * 准备蓝牙音频
      */
     private void blePrepare() {
+
+        if(!isBluetoothAvaiable()) { return; }
+
+        mAudioManager.startBluetoothSco();      // 蓝牙录音的关键，启动 SCO 连接，耳机话筒才起作用
+        mAudioManager.setMicrophoneMute(false);
+
+        // 注册监听广播；
+        registerReceiver(mReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
+        isReceivered = true;
+    }
+
+    private boolean isBluetoothAvaiable() {
         if (!mAudioManager.isBluetoothScoAvailableOffCall()) {
-            DebugLog.d(DebugLog.TAG, "MainActivity:startRecording " + "系统不支持蓝牙录音");
-            return;
+            DebugLog.d(DebugLog.TAG, "MainActivity:startRecording " + "系统不支持蓝牙麦克风");
+            return false;
         }
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -219,37 +244,40 @@ public class MainActivity extends Activity implements OnClickListener {
 
         if (!mBluetoothAdapter.isEnabled()) {
             Toast.makeText(MainActivity.this, "蓝牙设备未打开", Toast.LENGTH_SHORT).show();
-            return;
+            return false;
         }
-
-        DebugLog.d(DebugLog.TAG, "MainActivity:startRecording " + "系统支持蓝牙录音");
-        mAudioManager.stopBluetoothSco();
-        mAudioManager.startBluetoothSco();// 蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
-        // 注册监听广播
-        registerReceiver(mReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
-        isReceivered = true;
+        return true;
     }
 
     private Receiver mReceiver = new Receiver();
 
     private class Receiver extends BroadcastReceiver {
+        @Override
+        protected Object clone() throws CloneNotSupportedException {
+            return super.clone();
+        }
+
         public void onReceive(Context context, Intent intent) {
             int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
             if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
-                DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + "AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                mAudioManager.setBluetoothScoOn(true);  // 打开 SCO
-                DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + "Routing:" + mAudioManager.isBluetoothScoOn());
-                mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                if (!mIsStarted)
-                    showSoundHint();
-            } else {// 等待一秒后再尝试启动SCO
-                try {
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+
+                new Thread(new Runnable() {
+                    public void run() {
+                        mAudioManager.setBluetoothScoOn(true);  // 打开 SCO
+                        mAudioManager.setMode(AudioManager.STREAM_MUSIC);
+                        mHandler.obtainMessage(0).sendToTarget();
+                    }
+                }).start();
+
+            } else {
+
+                if(mStartCount < 10) {
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + " 再次 startBluetoothSco() ");
+                    mAudioManager.startBluetoothSco();
+                    mStartCount++;
+                } else {
+                    mHandler.obtainMessage(1).sendToTarget();
                 }
-                mAudioManager.startBluetoothSco();
-                DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + " 再次 startBluetoothSco() ");
             }
         }
     }
@@ -432,14 +460,7 @@ public class MainActivity extends Activity implements OnClickListener {
         if (isReceivered) {
             unregisterReceiver(mReceiver);
         }
-        closeBluetoothScoOn();
-    }
 
-    // 关闭蓝牙麦克风语音输入
-    private void closeBluetoothScoOn() {
-        if (mAudioManager.isBluetoothScoOn()) {
-            mAudioManager.setBluetoothScoOn(false);
-        }
+        mAudioManager.setMicrophoneMute(true);
     }
-
 }
