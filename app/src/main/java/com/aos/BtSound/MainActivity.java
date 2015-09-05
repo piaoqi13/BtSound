@@ -15,8 +15,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.os.Vibrator;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -55,7 +55,6 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button mBtnWeb = null;
     private Button mBtnSettings = null;
     private EditText mEdtTransformResult = null;
-    private Handler mHandler = new Handler();
 
     private SpeechRecognizer mSpeechRecognizer = null;  // 语音对象
     private SharedPreferences mSharedPreferences = null;// 存储对象
@@ -63,14 +62,32 @@ public class MainActivity extends Activity implements OnClickListener {
     private BluetoothAdapter mBluetoothAdapter = null;  // 蓝牙适配器
     private RecognizerDialog mRecognizerDialog = null;  // 语音对话框
     private String mSmsBody = null;                     // 短信内容
-    private SoundPool soundPool = null;
+    private SoundPool mSoundPool = null;
     private boolean mIsStarted = false;
 
     private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
     private Vibrator mVibrator = null;                  // 唤醒震动
-    private boolean isReceivered = false;               // 广播标识
 
     private int mStartCount = 0;                        // 控制信息，尝试打开蓝牙麦克风次数；
+
+    private Handler mHandler = new Handler(){
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case 0:
+                    if (!mIsStarted)
+                        showSoundHint();
+                    break;
+                case 1:
+                    Toast.makeText(MainActivity.this, "启动蓝牙麦克风失败", Toast.LENGTH_SHORT).show();
+                    mAudioManager.stopBluetoothSco();
+                    break;
+
+                case 2:
+                    mSoundPool.release();
+                    break;
+            }
+        }
+    };
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -154,25 +171,19 @@ public class MainActivity extends Activity implements OnClickListener {
     private void showSoundHint() {
 
         mIsStarted = true;
-        soundPool = new SoundPool(10, AudioManager.STREAM_SYSTEM, 5);
-        soundPool.load(this, R.raw.bootaudio, 1);
+        mSoundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
+        mSoundPool.load(this, R.raw.bootaudio, 1);
 
-//        if(mAudioManager.isSpeakerphoneOn())
-//            mAudioManager.setSpeakerphoneOn(false);
-
-        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+        mSoundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
             public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                 if (status == 0) {
-
                     playSound(sampleId);
                     mHandler.postDelayed(new Runnable() {
                         public void run() {
+                            // release sound
+                            mHandler.obtainMessage(2).sendToTarget();
                             mIsStarted = false;
                             showSpeakDialog();
-
-//                            if(!mAudioManager.isSpeakerphoneOn())
-//                                mAudioManager.setSpeakerphoneOn(true);
-
                         }
                     }, 4000);
                 }
@@ -180,13 +191,8 @@ public class MainActivity extends Activity implements OnClickListener {
         });
     }
 
-
     public void playSound(int id) {
-        AudioManager am = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        float audioMaxVolumn = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        float volumnCurrent = am.getStreamVolume(AudioManager.STREAM_MUSIC);
-        float volumnRatio = volumnCurrent / audioMaxVolumn;
-        soundPool.play(id, volumnRatio, volumnRatio, 1, 1, 1f);
+        mSoundPool.play(id, 0.5f, 0.5f, 1, 1, 1f);
     }
 
     private void showSpeakDialog() {
@@ -208,10 +214,10 @@ public class MainActivity extends Activity implements OnClickListener {
         mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
+                DebugLog.d(DebugLog.TAG, "MainActivity:onDismiss " + "");
                 mWakeUpRecognizer.start();
             }
         });
-
     }
 
     /**
@@ -222,17 +228,16 @@ public class MainActivity extends Activity implements OnClickListener {
 
         if(!isBluetoothAvaiable()) { return; }
 
-        mAudioManager.startBluetoothSco();      // 蓝牙录音的关键，启动 SCO 连接，耳机话筒才起作用
-        mAudioManager.setMicrophoneMute(false);
+        mAudioManager.stopBluetoothSco();
+        mAudioManager.startBluetoothSco();          // 蓝牙录音的关键，启动 SCO 连接，耳机话筒才起作用
+//        mAudioManager.setMicrophoneMute(true);    // 设置手机麦克风静音
 
         // 注册监听广播；
         registerReceiver(mReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
-        isReceivered = true;
     }
 
     private boolean isBluetoothAvaiable() {
         if (!mAudioManager.isBluetoothScoAvailableOffCall()) {
-            DebugLog.d(DebugLog.TAG, "MainActivity:startRecording " + "系统不支持蓝牙麦克风");
             return false;
         }
 
@@ -252,31 +257,33 @@ public class MainActivity extends Activity implements OnClickListener {
     private Receiver mReceiver = new Receiver();
 
     private class Receiver extends BroadcastReceiver {
-        @Override
-        protected Object clone() throws CloneNotSupportedException {
-            return super.clone();
-        }
 
         public void onReceive(Context context, Intent intent) {
-            int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
-            if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
 
-                new Thread(new Runnable() {
-                    public void run() {
-                        mAudioManager.setBluetoothScoOn(true);  // 打开 SCO
-                        mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                        mHandler.obtainMessage(0).sendToTarget();
-                    }
-                }).start();
+            if(intent.getAction().equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
+                int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
 
-            } else {
+                if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
 
-                if(mStartCount < 10) {
-                    DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + " 再次 startBluetoothSco() ");
-                    mAudioManager.startBluetoothSco();
-                    mStartCount++;
+                    // 注销接收器；
+//                    unregisterReceiver(this);
+                    new Thread(new Runnable() {
+                        public void run() {
+                            mAudioManager.setBluetoothScoOn(true);          // 打开 SCO
+                            mAudioManager.setMode(AudioManager.STREAM_MUSIC);
+                            mHandler.obtainMessage(0).sendToTarget();
+                        }
+                    }).start();
+
                 } else {
-                    mHandler.obtainMessage(1).sendToTarget();
+
+                    if (mStartCount < 10) {
+                        DebugLog.d(DebugLog.TAG, "MainActivity:onReceive " + " 再次 startBluetoothSco() ");
+                        mAudioManager.startBluetoothSco();
+                        mStartCount++;
+                    } else {
+                        mHandler.obtainMessage(1).sendToTarget();
+                    }
                 }
             }
         }
@@ -331,7 +338,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private RecognizerDialogListener recognizerDialogListener = new RecognizerDialogListener() {
         public void onResult(RecognizerResult result, boolean isLast) {
-            DebugLog.i("CollinWang", "RecognizerResult=" + result.getResultString());
+            DebugLog.d(DebugLog.TAG, "MainActivity:onResult "
+                    + "CollinWang" + "RecognizerResult=" + result.getResultString());
+
             String text = JsonParser.parseIatResult(result.getResultString());
             mEdtTransformResult.append(text);
             mEdtTransformResult.setSelection(mEdtTransformResult.length());
@@ -359,14 +368,16 @@ public class MainActivity extends Activity implements OnClickListener {
                     mSmsBody = mEdtTransformResult.getText().toString();
                 }
             } else {
-                Log.i("CollinWang", "没有联系人");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onResult " + "CollinWang" + "没有联系人");
             }
+
             // 科大讯飞结束云知声走起
             mWakeUpRecognizer.start();
         }
 
         public void onError(SpeechError error) {
-            DebugLog.i("CollinWang", "Information=" + error.getPlainDescription(true));
+            DebugLog.d(DebugLog.TAG, "MainActivity:onError "
+                    + "CollinWang" + "Information=" + error.getPlainDescription(true));
         }
 
     };
@@ -406,7 +417,8 @@ public class MainActivity extends Activity implements OnClickListener {
             if (error != null) {
                 //ToDo
             } else {
-                DebugLog.i("CollinWang", "上传联系人成功");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onLexiconUpdated "
+                        + "CollinWang" + "上传联系人成功");
             }
         }
     };
@@ -418,28 +430,41 @@ public class MainActivity extends Activity implements OnClickListener {
 
             @Override
             public void onWakeUpRecognizerStart() {
-                DebugLog.i("CollinWang", "语音唤醒已开始");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart "
+                        + "CollinWang" + "语音唤醒已开始");
+
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart "
+                        + "BluzOn : " + mAudioManager.isBluetoothScoOn());
             }
+
+
+
 
             @Override
             public void onWakeUpError(USCError error) {
                 if (error != null) {
-                    DebugLog.i("CollinWang", "Information=" + error.toString());
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpError "
+                            + "CollinWang" + "Information=" + error.toString());
                 }
             }
 
             @Override
             public void onWakeUpRecognizerStop() {
-                DebugLog.i("CollinWang", "语音唤醒已停止");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStop "
+                        + "CollinWang" + "语音唤醒已停止");
             }
 
             @Override
             public void onWakeUpResult(boolean succeed, String text, float score) {
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult " + "succeed : " + succeed);
                 if (succeed) {
                     mVibrator.vibrate(300);
-                    DebugLog.i("CollinWang", "语音唤醒成功");
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult "
+                            + "CollinWang" + "语音唤醒成功");
+
                     // 云知声结束停止
                     mWakeUpRecognizer.stop();
+//                    blePrepare();
                     showSpeakDialog();
                 }
             }
@@ -452,15 +477,37 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        DebugLog.d(DebugLog.TAG, "MainActivity:onResume " + "");
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        DebugLog.d(DebugLog.TAG, "MainActivity:onStop " + "");
+
+        // 将手机麦克风打开；
+//        mAudioManager.setMicrophoneMute(false);
+
+        // 结束蓝牙 SCO 连接
+        if(mAudioManager.isBluetoothScoOn()) {
+            mAudioManager.setBluetoothScoOn(false);
+            mAudioManager.stopBluetoothSco();
+        }
+
+    }
+
+    @Override
     protected void onDestroy() {
+        DebugLog.d(DebugLog.TAG, "MainActivity:onDestroy " + "");
         super.onDestroy();
         mSpeechRecognizer.cancel();
         mSpeechRecognizer.destroy();
         mWakeUpRecognizer.cancel();
-        if (isReceivered) {
-            unregisterReceiver(mReceiver);
-        }
 
-        mAudioManager.setMicrophoneMute(true);
     }
+
 }
