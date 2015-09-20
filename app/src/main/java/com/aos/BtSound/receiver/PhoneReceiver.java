@@ -75,11 +75,14 @@ public class PhoneReceiver extends BroadcastReceiver {
             AudioManager audio = (AudioManager) mContext.getSystemService(Service.AUDIO_SERVICE);
             switch (state) {
                 case TelephonyManager.CALL_STATE_IDLE:
-                    audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+
+                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "挂断");
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
-                    audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "接听");
                     break;
                 case TelephonyManager.CALL_STATE_RINGING:
@@ -108,7 +111,8 @@ public class PhoneReceiver extends BroadcastReceiver {
                         DebugLog.i("CollinWang", "code=" + code);
                     }
 
-                    audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                    //audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(0), AudioManager.FLAG_PLAY_SOUND);
                     // 获取音量
                     int max = audio.getStreamMaxVolume(AudioManager.STREAM_RING);
                     int current = audio.getStreamVolume(AudioManager.STREAM_RING);
