@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.ContentObserver;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.Uri;
@@ -26,6 +27,7 @@ import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.preference.Settings;
+import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.setting.IatSettings;
 import com.aos.BtSound.util.JsonParser;
 import com.iflytek.cloud.ErrorCode;
@@ -64,10 +66,12 @@ public class MainActivity extends Activity implements OnClickListener {
     private SoundPool mSoundPool = null;
     private boolean mIsStarted = false;
 
-     private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
+    private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
     private Vibrator mVibrator = null;                   // 唤醒震动
 
     private int mStartCount = 0;                        // 控制信息，尝试打开蓝牙麦克风次数；
+
+    private ContentObserver mContentObserver = null;
 
     // 跟踪语音唤醒是否开启；
     private boolean mIsWakeUpStarted = false;
@@ -111,6 +115,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
         // 友盟更新初始化
         UmengUpdateAgent.update(this);
+
+        mContentObserver = new SMSReceiver(mHandler, this);
+        getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
     }
 
     @Override
