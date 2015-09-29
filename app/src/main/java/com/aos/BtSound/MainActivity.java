@@ -229,13 +229,6 @@ public class MainActivity extends Activity implements OnClickListener {
             }
         }
 
-        mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                DebugLog.d(DebugLog.TAG, "MainActivity:onDismiss " + "");
-                mWakeUpRecognizer.start();
-            }
-        });
     }
 
     private InitListener mInitListener = new InitListener() {
@@ -423,7 +416,7 @@ public class MainActivity extends Activity implements OnClickListener {
     // 启动语音唤醒
     protected void wakeUpStart() {
         if(mWakeUpRecognizer.isRunning()) return;
-        mWakeUpRecognizer.start();
+            mWakeUpRecognizer.start();
     }
 
     private void initRecognizer() {
@@ -431,8 +424,16 @@ public class MainActivity extends Activity implements OnClickListener {
             // 初始化语音模块
             mSpeechRecognizer = SpeechRecognizer.createRecognizer(this, mInitListener);
 
-        if(mRecognizerDialog == null)
+        if(mRecognizerDialog == null) {
             mRecognizerDialog = new RecognizerDialog(this, mInitListener);
+
+            mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                public void onDismiss(DialogInterface dialog) {
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onDismiss " + "");
+                    mWakeUpRecognizer.start();
+                }
+            });
+        }
     }
 
     @Override
@@ -451,6 +452,9 @@ public class MainActivity extends Activity implements OnClickListener {
         mSpeechRecognizer.cancel();
         mSpeechRecognizer.destroy();
         mSpeechRecognizer = null;
+
+        mRecognizerDialog.dismiss();
+        mRecognizerDialog = null;
     }
 
     private void stopWakeupRecognizer() {
