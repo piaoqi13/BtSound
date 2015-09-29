@@ -42,6 +42,7 @@ import com.iflytek.cloud.ui.RecognizerDialog;
 import com.iflytek.cloud.ui.RecognizerDialogListener;
 import com.iflytek.cloud.util.ContactManager;
 import com.iflytek.cloud.util.ContactManager.ContactListener;
+import com.umeng.analytics.MobclickAgent;
 import com.umeng.update.UmengUpdateAgent;
 
 import cn.yunzhisheng.common.USCError;
@@ -49,6 +50,7 @@ import cn.yunzhisheng.wakeup.basic.WakeUpRecognizer;
 import cn.yunzhisheng.wakeup.basic.WakeUpRecognizerListener;
 
 public class MainActivity extends Activity implements OnClickListener {
+    private final String mPageName = "MainActivity";
     private Context mContext = null;
     private Button mBtnTakeCall = null;
     private Button mBtnSendMessages = null;
@@ -123,6 +125,8 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
+        MobclickAgent.onPageEnd(mPageName);
+        MobclickAgent.onResume(this);
         DebugLog.d(DebugLog.TAG, "MainActivity:onResume " + "");
 
         initWakeUp();               // 初始化唤醒
@@ -436,6 +440,8 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onPause();
         DebugLog.d(DebugLog.TAG, "MainActivity:onPause " + "");
 
+        MobclickAgent.onPageEnd(mPageName);
+        MobclickAgent.onResume(this);
         mBluetoothHelper.stop();
         stopSppechRecognizer();
         stopWakeupRecognizer();
