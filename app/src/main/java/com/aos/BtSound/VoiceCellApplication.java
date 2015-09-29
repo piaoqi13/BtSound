@@ -7,6 +7,7 @@ import com.aos.BtSound.model.ContactInfo;
 import com.aos.BtSound.preference.Settings;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechUtility;
+import com.umeng.analytics.MobclickAgent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,5 +35,9 @@ public class VoiceCellApplication extends Application {
 		SpeechUtility.createUtility(this, param.toString());
 		// 数据存储初始化
 		Settings.initPreferences(mApplication);
+		// 禁止默认统计
+		MobclickAgent.openActivityDurationTrack(false);
+		// 友盟错误上传
+		MobclickAgent.setCatchUncaughtExceptions(true);
 	}
 }
