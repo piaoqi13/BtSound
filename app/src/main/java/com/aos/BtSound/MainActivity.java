@@ -430,7 +430,8 @@ public class MainActivity extends Activity implements OnClickListener {
             mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 public void onDismiss(DialogInterface dialog) {
                     DebugLog.d(DebugLog.TAG, "MainActivity:onDismiss " + "");
-                    mWakeUpRecognizer.start();
+                    if(mWakeUpRecognizer != null)
+                        mWakeUpRecognizer.start();
                 }
             });
         }
@@ -453,7 +454,8 @@ public class MainActivity extends Activity implements OnClickListener {
         mSpeechRecognizer.destroy();
         mSpeechRecognizer = null;
 
-        mRecognizerDialog.dismiss();
+        if(mRecognizerDialog.isShowing())
+            mRecognizerDialog.dismiss();
         mRecognizerDialog = null;
     }
 
