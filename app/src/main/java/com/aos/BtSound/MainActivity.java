@@ -290,7 +290,7 @@ public class MainActivity extends Activity implements OnClickListener {
             mEdtTransformResult.setSelection(mEdtTransformResult.length());
 
             if (VoiceCellApplication.mContacts != null) {   // 联系人不是空
-                if (text.contains("打电话")) {// 是打电话
+                if (mEdtTransformResult.getText().toString().contains("打电话")) {// 是打电话
                     for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                         if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
@@ -298,7 +298,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             break;
                         }
                     }
-                } else if (text.contains("发短信")) {  // 发短信
+                } else if (mEdtTransformResult.getText().toString().contains("发短信")) {  // 发短信
                     for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                         if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                             Uri smsToUri = Uri.parse("smsto:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber());
