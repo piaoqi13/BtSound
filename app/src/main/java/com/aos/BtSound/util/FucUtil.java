@@ -3,6 +3,8 @@ package com.aos.BtSound.util;
 import android.content.Context;
 
 import java.io.InputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 类名：FucUtil.java
@@ -25,5 +27,19 @@ public class FucUtil {
             e.printStackTrace();
         }
         return result;
+    }
+
+    public static String getNumber(String str) {
+        String regEx="[^0-9]";
+        Pattern p = Pattern.compile(regEx);
+        Matcher m = p.matcher(str);
+        return m.replaceAll("").trim();
+    }
+
+    public static boolean isAvailableMobilePhone(String number) {
+        String str = "^((13[0-9])|147|(15[0-9])|(18[0-9])|(17[0-9]))\\d{8}$";
+        Pattern pattern = Pattern.compile(str);
+        Matcher matcher = pattern.matcher(number);
+        return matcher.matches();
     }
 }
