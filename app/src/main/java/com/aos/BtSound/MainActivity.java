@@ -170,13 +170,15 @@ public class MainActivity extends Activity implements OnClickListener {
                 showSpeakDialog();
                 break;
             case R.id.btn_navigation:
-                Toast.makeText(MainActivity.this, "敬请期待", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                MainActivity.this.startActivity(intent);
                 break;
             case R.id.btn_web:
                 openWeb();
                 break;
             case R.id.settings:
-                Toast.makeText(MainActivity.this, "敬请期待", Toast.LENGTH_SHORT).show();
+                Intent intent2 = new Intent(MainActivity.this, InstructionActivity.class);
+                startActivity(intent2);
                 break;
         }
     }
