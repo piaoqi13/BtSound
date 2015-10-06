@@ -292,6 +292,11 @@ public class MainActivity extends Activity implements OnClickListener {
             mEdtTransformResult.append(text);
             mEdtTransformResult.setSelection(mEdtTransformResult.length());
 
+            if (mEdtTransformResult.getText().toString().contains("拍照")) {
+                Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                MainActivity.this.startActivity(intent);
+            }
+
             if (VoiceCellApplication.mContacts != null) {   // 联系人不是空
                 if (mEdtTransformResult.getText().toString().contains("打电话")) {// 是打电话
                     if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
