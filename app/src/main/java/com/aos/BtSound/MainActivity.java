@@ -29,6 +29,7 @@ import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.preference.Settings;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.setting.IatSettings;
+import com.aos.BtSound.util.FucUtil;
 import com.aos.BtSound.util.JsonParser;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.InitListener;
@@ -169,13 +170,15 @@ public class MainActivity extends Activity implements OnClickListener {
                 showSpeakDialog();
                 break;
             case R.id.btn_navigation:
-                Toast.makeText(MainActivity.this, "敬请期待", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                MainActivity.this.startActivity(intent);
                 break;
             case R.id.btn_web:
                 openWeb();
                 break;
             case R.id.settings:
-                Toast.makeText(MainActivity.this, "敬请期待", Toast.LENGTH_SHORT).show();
+                Intent intent2 = new Intent(MainActivity.this, InstructionActivity.class);
+                startActivity(intent2);
                 break;
         }
     }
@@ -290,15 +293,23 @@ public class MainActivity extends Activity implements OnClickListener {
             mEdtTransformResult.setSelection(mEdtTransformResult.length());
 
             if (VoiceCellApplication.mContacts != null) {   // 联系人不是空
-                if (text.contains("打电话")) {// 是打电话
-                    for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
-                        if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
-                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                if (mEdtTransformResult.getText().toString().contains("打电话")) {// 是打电话
+                    if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
+                        String number = FucUtil.getNumber(mEdtTransformResult.getText().toString());
+                        if (FucUtil.isAvailableMobilePhone(number)) {
+                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
                             MainActivity.this.startActivity(intent);
-                            break;
+                        }
+                    } else {
+                        for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                MainActivity.this.startActivity(intent);
+                                break;
+                            }
                         }
                     }
-                } else if (text.contains("发短信")) {  // 发短信
+                } else if (mEdtTransformResult.getText().toString().contains("发短信")) {  // 发短信
                     for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                         if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                             Uri smsToUri = Uri.parse("smsto:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber());
@@ -377,7 +388,7 @@ public class MainActivity extends Activity implements OnClickListener {
             public void onWakeUpRecognizerStart() {
                 DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart "
                         + "CollinWang" + "语音唤醒已开始");
-                Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
                 mIsWakeUpStarted = true;
             }
 

@@ -88,8 +88,9 @@ public class PhoneReceiver extends BroadcastReceiver {
                 case TelephonyManager.CALL_STATE_RINGING:
                     String name = "";
                     for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
-                        if (incomingNumber.equals(VoiceCellApplication.mContacts.get(i).getPhoneNumber())) {
+                        if (incomingNumber.equals(VoiceCellApplication.mContacts.get(i).getPhoneNumber().replace(" ", ""))) {
                             name = VoiceCellApplication.mContacts.get(i).getName();
+                            DebugLog.i("CollinWang", "name=" + name);
                             break;
                         }
                     }
