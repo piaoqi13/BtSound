@@ -72,7 +72,9 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
             Log.d(TAG, "Error accessing file: " + e.getMessage());
         } finally {
             try {
-                //fos.close();
+                if (fos != null) {
+                    fos.close();
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -92,6 +94,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         File picDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         //get the current time
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        return new File(picDir.getPath() + File.separator + "IMAGE_" + timeStamp + ".jpg");
+        return new File(picDir.getPath() + "Camera" +File.separator + "IMAGE_" + timeStamp + ".jpg");
     }
 }
