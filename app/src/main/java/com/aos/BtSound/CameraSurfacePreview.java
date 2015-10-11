@@ -32,6 +32,7 @@ public class CameraSurfacePreview extends SurfaceView implements SurfaceHolder.C
         Log.d("Dennis", "surfaceCreated() is called");
 
         mCamera = Camera.open(1);
+        mCamera.setDisplayOrientation(90);
         try {
             // Open the Camera in preview mode
             mCamera.setPreviewDisplay(holder);
