@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.widget.Toast;
 
 import com.aos.BtSound.R;
+import com.aos.BtSound.VoiceCellApplication;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.model.SmsInfo;
 import com.aos.BtSound.setting.TtsSettings;
@@ -68,16 +69,18 @@ public class SMSReceiver extends ContentObserver {
 
 	@Override
 	public void onChange(boolean selfChange) {
-		Uri uri = Uri.parse(SMS_URI_INBOX);
-		SMSContent smscontent = new SMSContent(mActivity, uri);
-		mSmsInfos = smscontent.getSmsInfo();
-		if (!mSmsInfos.isEmpty()) {
-			setParam();// 设置参数
-			int code = mTts.startSpeaking(mSmsInfos.get(0).getSmsbody(), mTtsListener);
-			if (code != ErrorCode.SUCCESS) {
-				showTip("语音合成失败,错误码: " + code);
-			} else {
-				DebugLog.i("CollinWang", "code=" + code);
+		if (VoiceCellApplication.isReadSMS) {
+			Uri uri = Uri.parse(SMS_URI_INBOX);
+			SMSContent smscontent = new SMSContent(mActivity, uri);
+			mSmsInfos = smscontent.getSmsInfo();
+			if (!mSmsInfos.isEmpty()) {
+				setParam();// 设置参数
+				int code = mTts.startSpeaking(mSmsInfos.get(0).getSmsbody(), mTtsListener);
+				if (code != ErrorCode.SUCCESS) {
+					showTip("语音合成失败,错误码: " + code);
+				} else {
+					DebugLog.i("CollinWang", "code=" + code);
+				}
 			}
 		}
 		super.onChange(selfChange);

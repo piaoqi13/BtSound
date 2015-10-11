@@ -74,6 +74,11 @@
             android:label="@string/app_name"> </activity>
 
         <activity
+            android:name="com.aos.BtSound.MessageSwitch"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"> </activity>
+
+        <activity
             android:name="com.aos.BtSound.AndroidCameraActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"> </activity>

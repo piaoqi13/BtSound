@@ -34,7 +34,7 @@
         android:layout_gravity="center"
         android:layout_marginTop="8dp"
         android:background="@drawable/boder"
-        android:text="短 信"
+        android:text="短信"
         android:textColor="@drawable/tv_click_text_selector"
         android:textSize="60px" />
 
