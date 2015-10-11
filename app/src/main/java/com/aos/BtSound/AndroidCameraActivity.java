@@ -11,7 +11,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
-import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.os.Bundle;
 import android.os.Handler;
@@ -74,14 +73,12 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
             Bitmap bm0 = BitmapFactory.decodeByteArray(data, 0, data.length);
 
-            Log.d(TAG, "a " + System.currentTimeMillis());
+            // 旋转图片
             Bitmap bm = convertBmp(bm0);
-            Log.d(TAG, "b " + System.currentTimeMillis()+"");
 
+            // 保存到本地
             fos = new FileOutputStream(pictureFile);
             bm.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-            Log.d(TAG, "c " + System.currentTimeMillis());
-
             fos.flush();
 
             // 手动刷新系统相册
@@ -123,69 +120,9 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         int h = bm.getHeight();
 
         Matrix matrix = new Matrix();
-
         matrix.postScale(-1, 1);       // 镜像水平翻转
         Bitmap convertBmp = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
         return convertBmp;
-    }
-
-    // 处理相册图片旋转问题；
-    private Bitmap dealWithTriangle(byte[] data, String path) {
-
-        if(data.length == 0) return null;
-
-        // 获得 Bitmap
-        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-//        int degree = readPictureDegree(path); // 先获取角度，然后旋转该角度；
-        bitmap = rotaingImageView(90, bitmap);
-
-        return bitmap;
-    }
-
-    /**
-     * 旋转图片
-     * @param angle     角度；
-     * @param bitmap    图片；
-     * @return Bitmap   a；
-     */
-    public Bitmap rotaingImageView(int angle , Bitmap bitmap) {
-        // 旋转图片 动作
-        Matrix matrix = new Matrix();
-        matrix.postRotate(angle);
-
-        Log.d(TAG, "angle = " + angle);
-
-        // 创建新的图片
-        Bitmap resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0,
-                bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-        return resizedBitmap;
-    }
-
-    /**
-     * 读取图片属性：旋转的角度
-     * @param path 图片绝对路径
-     * @return degree旋转的角度
-     */
-    public static int readPictureDegree(String path) {
-        int degree  = 0;
-        try {
-            ExifInterface exifInterface = new ExifInterface(path);
-            int orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-            switch (orientation) {
-                case ExifInterface.ORIENTATION_ROTATE_90:
-                    degree = 90;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_180:
-                    degree = 180;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_270:
-                    degree = 270;
-                    break;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return degree;
     }
 
     @Override
