@@ -167,7 +167,8 @@ public class MainActivity extends Activity implements OnClickListener {
                 showSpeakDialog();
                 break;
             case R.id.btn_send_messages:
-                showSpeakDialog();
+                Intent intent3 = new Intent(MainActivity.this, MessageSwitch.class);
+                MainActivity.this.startActivity(intent3);
                 break;
             case R.id.btn_navigation:
                 Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
@@ -307,7 +308,8 @@ public class MainActivity extends Activity implements OnClickListener {
                         }
                     } else {
                         for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
-                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName()) ||
+                                    VoiceCellApplication.mContacts.get(i).getName().contains(text.replaceAll("[\\p{Punct}\\s]+", "").replace("打电话给", ""))) {
                                 Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                                 MainActivity.this.startActivity(intent);
                                 break;

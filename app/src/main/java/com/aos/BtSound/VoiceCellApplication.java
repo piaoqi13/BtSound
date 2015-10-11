@@ -22,6 +22,8 @@ public class VoiceCellApplication extends Application {
 	public static Context mApplication = null;
 	// 装载联系人信息
 	public static List<ContactInfo> mContacts = new ArrayList<ContactInfo>();
+	// 短信播报开关
+	public static boolean isReadSMS = true;
 
 	@Override
 	public void onCreate() {
