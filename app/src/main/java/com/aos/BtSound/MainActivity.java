@@ -44,7 +44,10 @@ import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechEvent;
 import com.iflytek.cloud.SpeechRecognizer;
+import com.iflytek.cloud.SpeechUnderstander;
+import com.iflytek.cloud.SpeechUnderstanderListener;
 import com.iflytek.cloud.SpeechUtility;
+import com.iflytek.cloud.UnderstanderResult;
 import com.iflytek.cloud.VoiceWakeuper;
 import com.iflytek.cloud.WakeuperListener;
 import com.iflytek.cloud.WakeuperResult;
@@ -112,6 +115,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private final static int MIN = -10;
     private int curThresh = MIN;
     private String threshStr = "门限值：";
+
+    private SpeechUnderstander mSpeechUnderstander;     // 语义理解对象（语音到语义）
 
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
@@ -181,6 +186,8 @@ public class MainActivity extends Activity implements OnClickListener {
             DebugLog.d(DebugLog.TAG, "启动本地引擎未成功!");
         }
         mIvw = VoiceWakeuper.createWakeuper(this, null);
+
+        mSpeechUnderstander = SpeechUnderstander.createUnderstander(this, speechUnderstanderListener);
     }
 
     private void initView() {
@@ -311,6 +318,20 @@ public class MainActivity extends Activity implements OnClickListener {
         return result;
     }
 
+    private void startSpeechUnderstander() {
+        setSpeechUnderstanderParam();
+        if(mSpeechUnderstander.isUnderstanding()){
+            mSpeechUnderstander.stopUnderstanding();
+        }else {
+            ret = mSpeechUnderstander.startUnderstanding(mSpeechUnderstanderListener);
+            if(ret != 0){
+                showTip("语义理解未成功，错误码:"	+ ret);
+            }else {
+                showTip(getString(R.string.text_begin));
+            }
+        }
+    }
+
     private void startWakeUp() {
         mIvw = VoiceWakeuper.getWakeuper();
         if (mIvw != null) {
@@ -371,6 +392,30 @@ public class MainActivity extends Activity implements OnClickListener {
         return tempBuffer.toString();
     }
 
+    public void setSpeechUnderstanderParam(){
+        String lag = mSharedPreferences.getString("understander_language_preference", "mandarin");
+        if (lag.equals("en_us")) {
+            mSpeechUnderstander.setParameter(SpeechConstant.LANGUAGE, "en_us");
+        }else {
+            mSpeechUnderstander.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
+            mSpeechUnderstander.setParameter(SpeechConstant.ACCENT,lag);
+        }
+        mSpeechUnderstander.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("understander_vadbos_preference", "4000"));
+        mSpeechUnderstander.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("understander_vadeos_preference", "1000"));
+        mSpeechUnderstander.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("understander_punc_preference", "1"));
+        mSpeechUnderstander.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/iflytek/wavaudio.pcm");
+    }
+
+    private InitListener speechUnderstanderListener = new InitListener() {
+        @Override
+        public void onInit(int code) {
+            DebugLog.d(DebugLog.TAG, "speechUnderstanderListener init() code = " + code);
+            if (code != ErrorCode.SUCCESS) {
+                showTip("初始化失败未成功，错误码："+code);
+            }
+        }
+    };
+
     private InitListener mInitListener = new InitListener() {
         @Override
         public void onInit(int code) {
@@ -414,6 +459,48 @@ public class MainActivity extends Activity implements OnClickListener {
         public void onContactQueryFinish(String contactInfos, boolean changeFlag) {
             mLocalLexicon = contactInfos;
         }
+    };
+
+    private SpeechUnderstanderListener mSpeechUnderstanderListener = new SpeechUnderstanderListener() {
+        @Override
+        public void onResult(final UnderstanderResult result) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (null != result) {
+                        String text = result.getResultString();
+                        if (!TextUtils.isEmpty(text)) {
+                            mEdtTransformResult.setText(text);
+                        }
+                    } else {
+                        showTip("开发语义识别结果不正确");
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void onVolumeChanged(int v) {
+            showTip("onVolumeChanged："	+ v);
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+            showTip("onEndOfSpeech");
+        }
+
+        @Override
+        public void onBeginOfSpeech() {
+            showTip("onBeginOfSpeech");
+        }
+
+        @Override
+        public void onError(SpeechError error) {
+            showTip("onError Code："	+ error.getErrorCode());
+        }
+
+        @Override
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) { }
     };
 
     private RecognizerListener mRecognizerListener = new RecognizerListener() {
@@ -464,6 +551,7 @@ public class MainActivity extends Activity implements OnClickListener {
         @Override
         public void onError(SpeechError error) {
             showTip("onError Code：" + error.getErrorCode());
+            //startSpeechUnderstander();
         }
 
         @Override
@@ -528,7 +616,7 @@ public class MainActivity extends Activity implements OnClickListener {
                         if (recoString.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                             MainActivity.this.startActivity(intent);
-                            break;
+                            return;
                         }
                     }
                 } else if (mEdtTransformResult.getText().toString().contains("拍照")) {
