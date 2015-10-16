@@ -2,6 +2,10 @@ package com.aos.BtSound.log;
 
 import android.util.Log;
 
+/**
+ * created by linky on 2015-08-26.
+ */
+
 public class DebugLog {
     public final static String TAG = "DebugLog";
     public static boolean isDebugMode = true;

@@ -6,6 +6,7 @@ import android.os.Bundle;
 /**
  * Created by collin on 2015-10-04.
  */
+
 public class InstructionActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {

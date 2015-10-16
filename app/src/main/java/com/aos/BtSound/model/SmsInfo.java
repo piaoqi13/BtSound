@@ -1,11 +1,15 @@
 package com.aos.BtSound.model;
 
+/**
+ * created by collin on 2015-09-23.
+ */
+
 public class SmsInfo {
-	private String smsbody;//短信内容
-	private String phoneNumber;//发送短信的电话号码
-	private String date;//发送短信的日期和时间
-	private String name;//发送短信人的姓名
-	private String type;//短信类型1是接收到的 2是已发出的
+	private String smsbody;						//短信内容
+	private String phoneNumber;					//发送短信的电话号码
+	private String date;						//发送短信的日期和时间
+	private String name;						//发送短信人的姓名
+	private String type;						//短信类型1是接收到的、2是已发出的
 
 	public String getSmsbody() {
 		return smsbody;

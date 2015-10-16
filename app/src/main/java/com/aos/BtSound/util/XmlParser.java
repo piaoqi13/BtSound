@@ -9,13 +9,10 @@ import java.io.InputStream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-
 /**
- * 类名：XmlParser.java
- * 注释：XML结果解析类
- * 日期：2015年8月5日
- * 作者：王超
+ * created by collin on 2015-08-05.
  */
+
 public class XmlParser {
     public static String parseNluResult(String xml) {
         StringBuffer buffer = new StringBuffer();

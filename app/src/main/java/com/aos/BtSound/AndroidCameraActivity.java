@@ -2,6 +2,7 @@ package com.aos.BtSound;
 
 /**
  * Created by wtt on 2015/8/30.
+ * Modify by collin on 2015-10-15. delete annotation
  */
 
 import android.app.Activity;
@@ -39,11 +40,9 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.mian);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        // Create our Preview view and set it as the content of our activity.
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         mCameraSurPreview = new CameraSurfacePreview(this);
         preview.addView(mCameraSurPreview);
-        // Add a listener to the Capture button
         mCaptureButton = (Button) findViewById(R.id.button_capture);
         mCaptureButton.setOnClickListener(this);
     }
@@ -61,7 +60,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
-        // save the picture to sdcard
         File pictureFile = getOutputMediaFile();
         if (pictureFile == null) {
             Log.d(TAG, "Error creating media file, check storage permissions: ");
@@ -70,23 +68,16 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
         String resultMessage = null;
         try {
-
             Bitmap bm0 = BitmapFactory.decodeByteArray(data, 0, data.length);
-
             // 旋转图片
             Bitmap bm = convertBmp(bm0);
-
             // 保存到本地
             fos = new FileOutputStream(pictureFile);
             bm.compress(Bitmap.CompressFormat.JPEG, 100, fos);
             fos.flush();
-
             // 手动刷新系统相册
-            MediaScannerConnection.scanFile(this,
-                    new String[]{pictureFile.toString()}, null, null);
-
+            MediaScannerConnection.scanFile(this, new String[]{pictureFile.toString()}, null, null);
             resultMessage = "照片保存在 " + pictureFile;
-
         } catch (FileNotFoundException e) {
             Log.d(TAG, "File not found: " + e.getMessage());
             resultMessage = e.getMessage();
@@ -106,8 +97,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
         Toast.makeText(AndroidCameraActivity.this, resultMessage, Toast.LENGTH_SHORT).show();
         finish();
-        // Restart the preview and re-enable the shutter button so that we can take another picture
-//        camera.startPreview();
     }
 
     private Bitmap convertBmp(Bitmap bmp) {
@@ -120,26 +109,21 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         int h = bm.getHeight();
 
         Matrix matrix = new Matrix();
-        matrix.postScale(-1, 1);       // 镜像水平翻转
+        matrix.postScale(-1, 1);// 镜像水平翻转
         Bitmap convertBmp = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
         return convertBmp;
     }
 
     @Override
     public void onClick(View v) {
-        // get an image from the camera
         mCameraSurPreview.takePicture(this);
     }
 
-    /**
-     *
-     * @return
-     */
     private File getOutputMediaFile() {
-        // get the mobile Pictures directory
         String picPath = "/sdcard/DCIM/Camera/";
         File picDir = new File(picPath);
-        if(!picDir.exists()) return null;
+        if (!picDir.exists())
+            return null;
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         return new File(picPath + File.separator + "IMG_" + timeStamp + ".jpg");

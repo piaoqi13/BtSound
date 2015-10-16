@@ -10,11 +10,9 @@ import android.widget.Toast;
 import java.util.regex.Pattern;
 
 /**
- * 类名：SettingTextWatcher.java
- * 注释：输入框输入范围控制
- * 日期：2015年8月5日
- * 作者：王超
+ * created by collin on 2015-08-05.
  */
+
 public class SettingTextWatcher implements TextWatcher {
     private int mEditStart;
     private int mEditCount;
@@ -57,11 +55,10 @@ public class SettingTextWatcher implements TextWatcher {
         } else {
             s.delete(mEditStart, mEditStart + mEditCount);
             mEditTextPreference.getEditText().setText(s);
-            Toast.makeText(mContext, "只能输入数字哦", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, "只能输入数字噢", Toast.LENGTH_SHORT).show();
         }
     }
 
-    // 判断是否为数字
     public static boolean isNumeric(String str) {
         Pattern pattern = Pattern.compile("[0-9]*");
         return pattern.matcher(str).matches();

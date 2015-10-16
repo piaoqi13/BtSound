@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!--<string name="app_name">傲石语音</string>-->
+    <string name="app_id">561f0604</string>
     <string name="app_name">傲石语音</string>
     <string name="take_call">打电话</string>
     <string name="send_messages">发短信</string>
     <string name="take_photo">拍照</string>
     <string name="setting">设置</string>
     <string name="transform_result">语音听写转换结果</string>
-    <string name="app_id">4fd96987</string>
 
     <string name="text_begin">请开始说话&#8230;</string>
     <string name="text_upload_contacts">上传联系人</string>
@@ -60,27 +58,18 @@
     </string-array>
 
     <string name="instruction">傲石语音助手使用说明：\n
-        \n
 1、将蓝牙眼镜（耳机）和安卓手机进行蓝牙连接；\n
-        \n
-2、打开傲石语音拨号软件（界面上会有“语音唤醒已开启”提示）
+2、打开傲石语音拨号软件（界面上会有“语音唤醒已开启”提示）\n
 ，后台唤醒上线后将不再需要手动开启；\n
-        \n
 3、通过蓝牙眼镜（耳机）说出“你好魔方”唤醒语音软件；\n
-        \n
      （*）用“打电话给XXX”命令拨出电话；\n
-        \n
      （*）用“打电话给138XXXXXXXX”命令拨出电话；\n
-        \n
      （*）用“拍照“命令启动拍照软件并在2秒后自拍一张照片；\n
-        \n
 4、有来电时，如果手机wifi在线，会向蓝牙眼镜（耳机）提示”XX
 （人名）来电话“；\n
-        \n
 5、点击短信进入设置短信播报开关：设置开启自动读取接收的短信，设置关闭则不读取；\n
-        \n
 备注：使用语音要求软件普通话标准、清晰，并注意网络状况良好
 （后续离线功能开启后将不需要网络）；\n
-        \n
+
 欢迎加入傲石语音QQ群：125821920</string>
 </resources>

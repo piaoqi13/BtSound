@@ -11,11 +11,9 @@ import com.aos.BtSound.R;
 import com.aos.BtSound.util.SettingTextWatcher;
 
 /**
- * 类名：IatSettings.java
- * 注释：听写设置界面
- * 日期：2015年8月5日
- * 作者：王超
+ * created by collin on 2015-08-05.
  */
+
 public class IatSettings extends PreferenceActivity implements OnPreferenceChangeListener {
     public static final String PREFER_NAME = "com.iflytek.setting";
     private EditTextPreference mVadbosPreference;

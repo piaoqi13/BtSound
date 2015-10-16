@@ -8,6 +8,7 @@ import android.widget.Switch;
 /**
  * Created by collin on 2015-10-11.
  */
+
 public class MessageSwitch extends Activity {
     private Switch mSwitch = null;
 

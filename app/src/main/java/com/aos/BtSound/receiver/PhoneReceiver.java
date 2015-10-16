@@ -27,35 +27,24 @@ import com.iflytek.cloud.util.ResourceUtil;
 import com.iflytek.cloud.util.ResourceUtil.RESOURCE_TYPE;
 
 /**
- * 类名：PhoneReceiver.java
- * 注释：监听来电广播
- * 日期：2015年8月19日
- * 作者：王超
+ * created by collin on 2015-08-31.
  */
+
 public class PhoneReceiver extends BroadcastReceiver {
     private Context mContext = null;
-    // 语音合成对象
     private SpeechSynthesizer mTts = null;
-    // 存储对象
     private SharedPreferences mSharedPreferences = null;
-    // 默认云端发音人
     public static String voicerCloud = "xiaoyan";
-    // 默认本地发音人
     public static String voicerLocal = "xiaoyan";
-    // 引擎类型
     private String mEngineType = SpeechConstant.TYPE_CLOUD;
-    // 缓冲进度
     private int mPercentForBuffering = 0;
-    // 播放进度
     private int mPercentForPlaying = 0;
-    // 吐司提示
     private Toast mToast = null;
 
     @SuppressLint("ShowToast")
     @Override
     public void onReceive(Context context, Intent intent) {
         this.mContext = context;
-        // 初始化合成对象
         mTts = SpeechSynthesizer.createSynthesizer(context, mTtsInitListener);
         mToast = Toast.makeText(context, "", Toast.LENGTH_SHORT);
         mSharedPreferences = context.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
@@ -75,13 +64,10 @@ public class PhoneReceiver extends BroadcastReceiver {
             AudioManager audio = (AudioManager) mContext.getSystemService(Service.AUDIO_SERVICE);
             switch (state) {
                 case TelephonyManager.CALL_STATE_IDLE:
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-
                     audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "挂断");
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
                     audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "接听");
                     break;
@@ -104,17 +90,14 @@ public class PhoneReceiver extends BroadcastReceiver {
                     } else {
                         tip = "请注意" + name + "正在呼叫您" + "号码是" + incomingNumber;
                     }
-                    setParam();// 设置参数
+                    setParam();
                     int code = mTts.startSpeaking(tip, mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
                         showTip("语音合成失败,错误码: " + code);
                     } else {
                         DebugLog.i("CollinWang", "code=" + code);
                     }
-
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
                     audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(0), AudioManager.FLAG_PLAY_SOUND);
-                    // 获取音量
                     int max = audio.getStreamMaxVolume(AudioManager.STREAM_RING);
                     int current = audio.getStreamVolume(AudioManager.STREAM_RING);
                     DebugLog.i("CollinWang", "来电max=" + max + "；current=" + current);
@@ -123,7 +106,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         }
     };
 
-    // 初始化监听
     private InitListener mTtsInitListener = new InitListener() {
         @Override
         public void onInit(int code) {
@@ -139,7 +121,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         mToast.show();
     }
 
-    // 设置属性
     private void setParam() {
         mTts.setParameter(SpeechConstant.PARAMS, null);
         if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
@@ -156,7 +137,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
     }
 
-    // 获取发音人资源路径
     private String getResourcePath() {
         StringBuffer tempBuffer = new StringBuffer();
         tempBuffer.append(ResourceUtil.generateResourcePath(mContext, RESOURCE_TYPE.assets, "tts/common.jet"));
@@ -165,7 +145,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         return tempBuffer.toString();
     }
 
-    // 合成回调监听
     private SynthesizerListener mTtsListener = new SynthesizerListener() {
         @Override
         public void onSpeakBegin() {
@@ -203,9 +182,7 @@ public class PhoneReceiver extends BroadcastReceiver {
         }
 
         @Override
-        public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) {
-            // ToDo
-        }
+        public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) { }
     };
 
 }

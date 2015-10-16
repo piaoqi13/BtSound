@@ -7,11 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 类名：FucUtil.java
- * 注释：读取asset目录下文件
- * 日期：2015年8月5日
- * 作者：王超
+ * created by collin on 2015-08-05.
  */
+
 public class FucUtil {
     public static String readFile(Context mContext, String file, String code) {
         int len = 0;

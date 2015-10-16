@@ -2,6 +2,7 @@ package com.aos.BtSound;
 
 /**
  * Created by wtt on 2015/8/30.
+ * Modify by collin on 2015-10-15. delete annotation
  */
 
 import android.content.Context;
@@ -18,22 +19,17 @@ public class CameraSurfacePreview extends SurfaceView implements SurfaceHolder.C
     private SurfaceHolder mHolder;
     private Camera mCamera;
     Camera.Parameters parameters;
-    // private boolean af;
 
     public CameraSurfacePreview(Context context) {
         super(context);
-        // Install a SurfaceHolder.Callback so we get notified when the
-        // underlying surface is created and destroyed.
         mHolder = getHolder();
         mHolder.addCallback(this);
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
         Log.d("Dennis", "surfaceCreated() is called");
-
         mCamera = Camera.open(1);
         try {
-            // Open the Camera in preview mode
             mCamera.setPreviewDisplay(holder);
         } catch (IOException e) {
             Log.d("Dennis", "Error setting camera preview: " + e.getMessage());
@@ -59,10 +55,9 @@ public class CameraSurfacePreview extends SurfaceView implements SurfaceHolder.C
         Log.d("Dennis", "surfaceDestroyed() is called");
     }
 
-    public boolean onTouchEvent(MotionEvent event) {//��Ļ�����¼�
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {//����ʱ�Զ��Խ�
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
             mCamera.autoFocus(null);
-            // af = true;
         }
         return true;
     }

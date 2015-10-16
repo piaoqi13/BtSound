@@ -5,11 +5,9 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 
 /**
- * 类名：Settings.java
- * 注释：数据存储工具类
- * 日期：2015年8月30日
- * 作者：王超
+ * created by collin on 2015-08-30.
  */
+
 public class Settings {
     public static final String SHARED_PREFERENCES_NAME = "PiaoqiStudio";
     public static SharedPreferences mSharedPreference = null;
