@@ -126,7 +126,7 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-        MobclickAgent.onPageEnd(mPageName);
+        MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
         DebugLog.d(DebugLog.TAG, "MainActivity:onResume " + "");
 
@@ -395,7 +395,7 @@ public class MainActivity extends Activity implements OnClickListener {
             public void onWakeUpRecognizerStart() {
                 DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart "
                         + "CollinWang" + "语音唤醒已开始");
-                //Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
                 mIsWakeUpStarted = true;
             }
 
@@ -461,7 +461,7 @@ public class MainActivity extends Activity implements OnClickListener {
         DebugLog.d(DebugLog.TAG, "MainActivity:onPause " + "");
 
         MobclickAgent.onPageEnd(mPageName);
-        MobclickAgent.onResume(this);
+        MobclickAgent.onPause(this);
         mBluetoothHelper.stop();
         stopSppechRecognizer();
         stopWakeupRecognizer();
