@@ -13,6 +13,8 @@ import com.aos.BtSound.R;
 import com.aos.BtSound.VoiceCellApplication;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.model.SmsInfo;
+import com.aos.BtSound.preference.Config;
+import com.aos.BtSound.preference.Settings;
 import com.aos.BtSound.setting.TtsSettings;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.InitListener;
@@ -69,17 +71,25 @@ public class SMSReceiver extends ContentObserver {
 
 	@Override
 	public void onChange(boolean selfChange) {
-		if (VoiceCellApplication.isReadSMS) {
+		if (Settings.getBoolean(Config.IS_READ_SMS, true, false)) {
 			Uri uri = Uri.parse(SMS_URI_INBOX);
 			SMSContent smscontent = new SMSContent(mActivity, uri);
 			mSmsInfos = smscontent.getSmsInfo();
 			if (!mSmsInfos.isEmpty()) {
-				setParam();// 设置参数
-				int code = mTts.startSpeaking(mSmsInfos.get(0).getSmsbody(), mTtsListener);
-				if (code != ErrorCode.SUCCESS) {
-					showTip("语音合成失败,错误码: " + code);
-				} else {
-					DebugLog.i("CollinWang", "code=" + code);
+				for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+					if (mSmsInfos.get(0).getPhoneNumber().replace("+86", "").equals(VoiceCellApplication.mContacts.get(i).getPhoneNumber().replace(" ", ""))) {
+						setParam();
+						int code = mTts.startSpeaking("有短信息进来，内容是" + mSmsInfos.get(0).getSmsbody(), mTtsListener);
+						if (code != ErrorCode.SUCCESS) {
+							showTip("语音合成未成功，错误码: " + code);
+						} else {
+							DebugLog.i("CollinWang", "code=" + code);
+						}
+						break;
+					} else {
+						DebugLog.i("CollinWang", "phoneNumber=" + VoiceCellApplication.mContacts.get(i).getPhoneNumber());
+					}
+
 				}
 			}
 		}

@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
@@ -43,13 +45,30 @@ public class PhoneReceiver extends BroadcastReceiver {
     // 默认本地发音人
     public static String voicerLocal = "xiaoyan";
     // 引擎类型
-    private String mEngineType = SpeechConstant.TYPE_CLOUD;
+    private String mEngineType = SpeechConstant.TYPE_LOCAL;
     // 缓冲进度
     private int mPercentForBuffering = 0;
     // 播放进度
     private int mPercentForPlaying = 0;
     // 吐司提示
     private Toast mToast = null;
+    private String tip = "";
+
+    private Handler mHandler = new Handler(){
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case 4444:
+                    setParam();// 设置参数
+                    int code = mTts.startSpeaking(tip, mTtsListener);
+                    if (code != ErrorCode.SUCCESS) {
+                        showTip("语音合成失败,错误码: " + code);
+                    } else {
+                        DebugLog.i("CollinWang", "code=" + code);
+                    }
+                    break;
+            }
+        }
+    };
 
     @SuppressLint("ShowToast")
     @Override
@@ -77,12 +96,12 @@ public class PhoneReceiver extends BroadcastReceiver {
                 case TelephonyManager.CALL_STATE_IDLE:
                     //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
 
-                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
+                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "挂断");
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
                     //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
+                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "接听");
                     break;
                 case TelephonyManager.CALL_STATE_RINGING:
@@ -98,22 +117,17 @@ public class PhoneReceiver extends BroadcastReceiver {
                     DebugLog.i("CollinWang", "来电号码=" + incomingNumber);
                     DebugLog.i("CollinWang", "名字=" + name);
 
-                    String tip = "";
+                    //audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(0), AudioManager.FLAG_PLAY_SOUND);
+
                     if (name.equals("")) {
                         tip = "请注意号码" + incomingNumber + "正在呼叫您";
                     } else {
-                        tip = "请注意" + name + "正在呼叫您" + "号码是" + incomingNumber;
-                    }
-                    setParam();// 设置参数
-                    int code = mTts.startSpeaking(tip, mTtsListener);
-                    if (code != ErrorCode.SUCCESS) {
-                        showTip("语音合成失败,错误码: " + code);
-                    } else {
-                        DebugLog.i("CollinWang", "code=" + code);
+                        tip = "请注意" + name + "正在呼叫您";
                     }
 
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-                    audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(0), AudioManager.FLAG_PLAY_SOUND);
+
+                    mHandler.sendEmptyMessageDelayed(4444, 1500);
                     // 获取音量
                     int max = audio.getStreamMaxVolume(AudioManager.STREAM_RING);
                     int current = audio.getStreamVolume(AudioManager.STREAM_RING);

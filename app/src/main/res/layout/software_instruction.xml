@@ -6,6 +6,15 @@
     android:orientation="vertical">
 
     <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:text="傲石语音助手使用说明"
+        android:textSize="15sp"
+        android:textStyle="bold"/>
+
+    <TextView
         android:id="@+id/tv_instruction"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"

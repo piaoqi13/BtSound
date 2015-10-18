@@ -16,6 +16,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -26,12 +28,13 @@ import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
 import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
-import com.aos.BtSound.preference.Settings;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.setting.IatSettings;
 import com.aos.BtSound.util.FucUtil;
 import com.aos.BtSound.util.JsonParser;
+import com.aos.BtSound.util.XmlParser;
 import com.iflytek.cloud.ErrorCode;
+import com.iflytek.cloud.GrammarListener;
 import com.iflytek.cloud.InitListener;
 import com.iflytek.cloud.LexiconListener;
 import com.iflytek.cloud.RecognizerListener;
@@ -43,6 +46,7 @@ import com.iflytek.cloud.ui.RecognizerDialog;
 import com.iflytek.cloud.ui.RecognizerDialogListener;
 import com.iflytek.cloud.util.ContactManager;
 import com.iflytek.cloud.util.ContactManager.ContactListener;
+import com.iflytek.cloud.util.ResourceUtil;
 import com.umeng.analytics.MobclickAgent;
 import com.umeng.update.UmengUpdateAgent;
 
@@ -58,10 +62,10 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button mBtnNavigation = null;
     private Button mBtnWeb = null;
     private Button mBtnSettings = null;
+    private Button mBtnInstruction = null;
     private EditText mEdtTransformResult = null;
 
     private SpeechRecognizer mSpeechRecognizer = null;  // 语音对象
-    private SharedPreferences mSharedPreferences = null;// 存储对象
     private AudioManager mAudioManager = null;          // 音频管理类
     private BluetoothAdapter mBluetoothAdapter = null;  // 蓝牙适配器
     private RecognizerDialog mRecognizerDialog = null;  // 语音对话框
@@ -70,7 +74,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private boolean mIsStarted = false;
 
     private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
-    private Vibrator mVibrator = null;                   // 唤醒震动
+    private Vibrator mVibrator = null;                  // 唤醒震动
 
     private int mStartCount = 0;                        // 控制信息，尝试打开蓝牙麦克风次数；
 
@@ -78,6 +82,25 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // 跟踪语音唤醒是否开启；
     private boolean mIsWakeUpStarted = false;
+
+    private SpeechRecognizer mAsr = null;               // 语音识别对象
+    private Toast mToast = null;                        // 吐司提示
+
+    private SharedPreferences mSharedPreferences;       // 存储配置
+    private String mLocalGrammar = null;                // 本地语法文件
+    private String mLocalLexicon = null;                // 本地词典
+    private String mCloudGrammar = null;                // 云端语法文件
+    // 本地语法构建路径
+    private String grmPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/msc/test";
+    private String mResultType = "json";                // Result结果格式支持XML和JSON
+
+    private final String KEY_GRAMMAR_ABNF_ID = "grammar_abnf_id";
+    private final String GRAMMAR_TYPE_ABNF = "abnf";
+    private final String GRAMMAR_TYPE_BNF = "bnf";
+
+    private String mEngineType = "local";               // 识别方式云端和本地
+    private String mContent;                            // 语法、词典临时变量
+    private int ret = 0;                                // 函数回值
 
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
@@ -93,6 +116,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
                 case 2:
                     mSoundPool.release();
+                    break;
+                case 4444:
+                    upDateDictionary();
                     break;
             }
         }
@@ -119,6 +145,20 @@ public class MainActivity extends Activity implements OnClickListener {
         // 友盟更新初始化
         UmengUpdateAgent.update(this);
 
+        mAsr = SpeechRecognizer.createRecognizer(this, mInitListener);
+        // 初始化语法、命令词
+        mLocalLexicon = "王超\n刘雄斌\n蔡哥\n";
+        mLocalGrammar = FucUtil.readFile(this, "call.bnf", "utf-8");
+        mCloudGrammar = FucUtil.readFile(this, "grammar_sample.abnf", "utf-8");
+        // 获取联系人、本地更新词典时使用
+        ContactManager mgr = ContactManager.createManager(this, mContactListener);
+        mgr.asyncQueryAllContactsName();
+        mSharedPreferences = getSharedPreferences(getPackageName(), MODE_PRIVATE);
+        mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
+
+        buildGrammar();
+        mHandler.sendEmptyMessageDelayed(4444, 1000);
+
         mContentObserver = new SMSReceiver(mHandler, this);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
     }
@@ -128,11 +168,12 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onResume();
         MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
+        mEdtTransformResult.setText("Speak Result");
         DebugLog.d(DebugLog.TAG, "MainActivity:onResume " + "");
 
         initWakeUp();               // 初始化唤醒
         wakeUpStart();              // 启动唤醒
-        initRecognizer();           // 初始化语音识别
+        //initRecognizer();           // 初始化语音识别
         mBluetoothHelper.start();   // 启动、检测蓝牙模块
     }
 
@@ -141,15 +182,16 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnSendMessages = (Button) findViewById(R.id.btn_send_messages);
         mBtnNavigation = (Button) findViewById(R.id.btn_navigation);
         mBtnWeb = (Button) findViewById(R.id.btn_web);
-        mBtnSettings = (Button) findViewById(R.id.settings);
+        mBtnInstruction = (Button) findViewById(R.id.btn_instruction);
+        mBtnSettings = (Button) findViewById(R.id.btn_settings);
         mEdtTransformResult = (EditText) findViewById(R.id.edt_result_text);
 
         mSharedPreferences = getSharedPreferences(IatSettings.PREFER_NAME, Activity.MODE_PRIVATE);
         // 第一次上传联系人
-        if (Settings.getBoolean(Config.IS_FIRST_TIME, true, false)) {
-            ContactManager mgr = ContactManager.createManager(mContext, mContactListener);
-            mgr.asyncQueryAllContactsName();
-        }
+//        if (Settings.getBoolean(Config.IS_FIRST_TIME, true, false)) {
+//            ContactManager mgr = ContactManager.createManager(mContext, mContactListener);
+//            mgr.asyncQueryAllContactsName();
+//        }
     }
 
     private void setListener() {
@@ -158,15 +200,184 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnNavigation.setOnClickListener(this);
         mBtnWeb.setOnClickListener(this);
         mBtnSettings.setOnClickListener(this);
+        mBtnInstruction.setOnClickListener(this);
+    }
+
+    private void buildGrammar() {
+        mContent = new String(mLocalGrammar);
+        mAsr.setParameter(SpeechConstant.PARAMS, null);
+        mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
+        mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+        mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+        ret = mAsr.buildGrammar(GRAMMAR_TYPE_BNF, mContent, grammarListener);
+        if (ret != ErrorCode.SUCCESS) {
+            showTip("语法构建未成功");
+        }
+    }
+
+    private void upDateDictionary() {
+        mContent = new String(mLocalLexicon);
+        mAsr.setParameter(SpeechConstant.PARAMS, null);
+        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+        mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+        mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+        mAsr.setParameter(SpeechConstant.GRAMMAR_LIST, "call");
+        mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+        ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
+        if (ret != ErrorCode.SUCCESS) {
+            showTip("更新词典未成功");
+        }
+        Log.i("CollinWang", "mContent=" + mContent);
+    }
+
+    public boolean setParam() {
+        boolean result = false;
+        mAsr.setParameter(SpeechConstant.PARAMS, null);
+        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
+        if ("cloud".equalsIgnoreCase(mEngineType)) {
+            String grammarId = mSharedPreferences.getString(KEY_GRAMMAR_ABNF_ID, null);
+            if (TextUtils.isEmpty(grammarId)) {
+                result = false;
+            } else {
+                mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
+                mAsr.setParameter(SpeechConstant.CLOUD_GRAMMAR, grammarId);
+                result = true;
+            }
+        } else {
+            mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+            mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+            mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
+            mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
+            mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
+            result = true;
+        }
+        return result;
+    }
+
+    private String getResourcePath() {
+        StringBuffer tempBuffer = new StringBuffer();
+        tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "asr/common.jet"));
+        return tempBuffer.toString();
+    }
+
+    private LexiconListener lexiconListener = new LexiconListener() {
+        @Override
+        public void onLexiconUpdated(String lexiconId, SpeechError error) {
+            if (error == null) {
+                DebugLog.d(DebugLog.TAG, "词典更新成功");
+            } else {
+                showTip("词典更新未成功，错误码：" + error.getErrorCode());
+            }
+        }
+    };
+
+    private GrammarListener grammarListener = new GrammarListener() {
+        @Override
+        public void onBuildFinish(String grammarId, SpeechError error) {
+            if (error == null) {
+                if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+                    SharedPreferences.Editor editor = mSharedPreferences.edit();
+                    if (!TextUtils.isEmpty(grammarId))
+                        editor.putString(KEY_GRAMMAR_ABNF_ID, grammarId);
+                    editor.commit();
+                }
+                DebugLog.d(DebugLog.TAG, "语法构建成功");
+            } else {
+                showTip("语法构建未成功，错误码：" + error.getErrorCode());
+            }
+        }
+    };
+
+    private ContactListener mContactListener = new ContactListener() {
+        @Override
+        public void onContactQueryFinish(String contactInfos, boolean changeFlag) {
+            mLocalLexicon = contactInfos;
+        }
+    };
+
+    private RecognizerListener mRecognizerListener = new RecognizerListener() {
+        @Override
+        public void onVolumeChanged(int volume) {
+            showTip("当前正在说话，音量大小：" + volume);
+        }
+
+        @Override
+        public void onResult(final RecognizerResult result, boolean isLast) {
+            if (null != result && !TextUtils.isEmpty(result.getResultString())) {
+                DebugLog.d(DebugLog.TAG, "Recognizer Result=" + result.getResultString());
+                String text = "";
+                if (mResultType.equals("json")) {
+                    text = JsonParser.parseGrammarResult(result.getResultString(), mEngineType);
+                } else if (mResultType.equals("xml")) {
+                    text = XmlParser.parseNluResult(result.getResultString());
+                }
+                if (text.equals("")) {
+                    showTip("请清晰说话噢");
+                } else {
+                    if (text.contains("打电话")) {
+                        mEdtTransformResult.setText(text);
+                        String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
+                        for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                MainActivity.this.startActivity(intent);
+                                break;
+                            }
+                        }
+                    } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
+                        mEdtTransformResult.setText(text);
+                        Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                        MainActivity.this.startActivity(intent);
+                    } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
+                        mWakeUpRecognizer.start();
+                    }
+                }
+            } else {
+                DebugLog.d(DebugLog.TAG, "Recognizer Result=null");
+            }
+        }
+
+        @Override
+        public void onEndOfSpeech() {
+            showTip("结束说话");
+        }
+
+        @Override
+        public void onBeginOfSpeech() {
+            showTip("语法识别开始说话");
+        }
+
+        @Override
+        public void onError(SpeechError error) {
+            showTip("onError Code：" + error.getErrorCode());
+            mWakeUpRecognizer.start();
+        }
+
+        @Override
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) { }
+    };
+
+    private void showTip(final String str) {
+        mToast.setText(str);
+        mToast.show();
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_take_call:
-                showSpeakDialog();
+                mWakeUpRecognizer.stop();
+                if (!setParam()) {
+                    showTip("请构建语法再语音识别");
+                    return;
+                }
+                ret = mAsr.startListening(mRecognizerListener);
+                if (ret != ErrorCode.SUCCESS) {
+                    showTip("识别未成功，错误码: " + ret);
+                }
                 break;
-            case R.id.btn_send_messages:
+            case R.id.btn_settings:
                 Intent intent3 = new Intent(MainActivity.this, MessageSwitch.class);
                 MainActivity.this.startActivity(intent3);
                 break;
@@ -177,7 +388,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.btn_web:
                 openWeb();
                 break;
-            case R.id.settings:
+            case R.id.btn_instruction:
                 Intent intent2 = new Intent(MainActivity.this, InstructionActivity.class);
                 startActivity(intent2);
                 break;
@@ -205,7 +416,15 @@ public class MainActivity extends Activity implements OnClickListener {
                             // release sound
                             mHandler.obtainMessage(2).sendToTarget();
                             mIsStarted = false;
-                            showSpeakDialog();
+                            //showSpeakDialog();
+                            if (!setParam()) {
+                                showTip("请构建语法再语音识别");
+                                return;
+                            }
+                            ret = mAsr.startListening(mRecognizerListener);
+                            if (ret != ErrorCode.SUCCESS) {
+                                showTip("识别未成功，错误码: " + ret);
+                            }
                         }
                     }, 4000);
                 }
@@ -217,23 +436,23 @@ public class MainActivity extends Activity implements OnClickListener {
         mSoundPool.play(id, 0.5f, 0.5f, 1, 1, 1f);
     }
 
-    private void showSpeakDialog() {
-        mEdtTransformResult.setText(null);
-        setParam();
-        boolean isShowDialogII = mSharedPreferences.getBoolean(getString(R.string.pref_key_iat_show), true);
-        if (isShowDialogII) {
-            mRecognizerDialog.setListener(recognizerDialogListener);
-            mRecognizerDialog.show();
-            mWakeUpRecognizer.stop();
-        } else {
-            int errorCode = mSpeechRecognizer.startListening(recognizerListener);
-            if (errorCode != ErrorCode.SUCCESS) {
-                Toast toastII = Toast.makeText(mContext, "听写失败" + errorCode, Toast.LENGTH_LONG);
-                toastII.show();
-            }
-        }
-
-    }
+//    private void showSpeakDialog() {
+//        mEdtTransformResult.setText(null);
+//        setParam();
+//        boolean isShowDialogII = mSharedPreferences.getBoolean(getString(R.string.pref_key_iat_show), true);
+//        if (isShowDialogII) {
+//            mRecognizerDialog.setListener(recognizerDialogListener);
+//            mRecognizerDialog.show();
+//            mWakeUpRecognizer.stop();
+//        } else {
+//            int errorCode = mSpeechRecognizer.startListening(recognizerListener);
+//            if (errorCode != ErrorCode.SUCCESS) {
+//                Toast toastII = Toast.makeText(mContext, "听写失败" + errorCode, Toast.LENGTH_LONG);
+//                toastII.show();
+//            }
+//        }
+//
+//    }
 
     private InitListener mInitListener = new InitListener() {
         @Override
@@ -343,47 +562,6 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     };
 
-    public void setParam() {
-        mSpeechRecognizer.setParameter(SpeechConstant.PARAMS, null);
-        String lag = mSharedPreferences.getString("iat_language_preference", "mandarin");
-        mSpeechRecognizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
-        if (lag.equals("en_us")) {
-            mSpeechRecognizer.setParameter(SpeechConstant.LANGUAGE, "en_us");
-        } else {
-            mSpeechRecognizer.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
-            mSpeechRecognizer.setParameter(SpeechConstant.ACCENT, lag);
-        }
-        mSpeechRecognizer.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("iat_vadbos_preference", "4000"));
-        mSpeechRecognizer.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("iat_vadeos_preference", "1000"));
-        mSpeechRecognizer.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("iat_punc_preference", "1"));
-        mSpeechRecognizer.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/iflytek/wavaudio.pcm");
-    }
-
-    private ContactListener mContactListener = new ContactListener() {
-        @Override
-        public void onContactQueryFinish(String contactInfos, boolean changeFlag) {
-            mSpeechRecognizer.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
-            mSpeechRecognizer.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
-            int ret = mSpeechRecognizer.updateLexicon("contact", contactInfos, lexiconListener);
-            if (ret != ErrorCode.SUCCESS) {
-                //ToDo
-            }
-        }
-    };
-
-    // 上传联系人监听器
-    private LexiconListener lexiconListener = new LexiconListener() {
-        @Override
-        public void onLexiconUpdated(String lexiconId, SpeechError error) {
-            if (error != null) {
-                //ToDo
-            } else {
-                DebugLog.d(DebugLog.TAG, "MainActivity:onLexiconUpdated "
-                        + "CollinWang" + "上传联系人成功");
-            }
-        }
-    };
-
     // 初始化本地离线唤醒
     private void initWakeUp() {
         if(mWakeUpRecognizer != null) return;
@@ -425,7 +603,15 @@ public class MainActivity extends Activity implements OnClickListener {
 
                     // 云知声结束停止
                     mWakeUpRecognizer.stop();
-                    showSpeakDialog();
+                    //showSpeakDialog();
+                    if (!setParam()) {
+                        showTip("请构建语法再语音识别");
+                        return;
+                    }
+                    ret = mAsr.startListening(mRecognizerListener);
+                    if (ret != ErrorCode.SUCCESS) {
+                        showTip("识别未成功，错误码: " + ret);
+                    }
                 }
             }
         });
@@ -463,19 +649,19 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPageEnd(mPageName);
         MobclickAgent.onPause(this);
         mBluetoothHelper.stop();
-        stopSppechRecognizer();
+//        stopSppechRecognizer();
         stopWakeupRecognizer();
     }
 
-    private void stopSppechRecognizer() {
-        mSpeechRecognizer.cancel();
-        mSpeechRecognizer.destroy();
-        mSpeechRecognizer = null;
-
-        if(mRecognizerDialog.isShowing())
-            mRecognizerDialog.dismiss();
-        mRecognizerDialog = null;
-    }
+//    private void stopSppechRecognizer() {
+//        mSpeechRecognizer.cancel();
+//        mSpeechRecognizer.destroy();
+//        mSpeechRecognizer = null;
+//
+//        if(mRecognizerDialog.isShowing())
+//            mRecognizerDialog.dismiss();
+//        mRecognizerDialog = null;
+//    }
 
     private void stopWakeupRecognizer() {
         mWakeUpRecognizer.stop();
@@ -483,9 +669,6 @@ public class MainActivity extends Activity implements OnClickListener {
         mWakeUpRecognizer = null;
     }
 
-    // inner class
-    // BluetoothHeadsetUtils is an abstract class that has
-    // 4 abstracts methods that need to be implemented.
     private class BluetoothHelper extends BluetoothHeadsetUtils {
         public BluetoothHelper(Context context) {
             super(context);
@@ -493,13 +676,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
         @Override
         public void onScoAudioDisconnected() {
-            // Cancel speech recognizer if desired
             DebugLog.d(DebugLog.TAG, "BluetoothHelper:onScoAudioDisconnected " + "");
         }
 
         @Override
         public void onScoAudioConnected() {
-            // Should start speech recognition here if not already started
             DebugLog.d(DebugLog.TAG, "BluetoothHelper:onScoAudioConnected " + "");
         }
 

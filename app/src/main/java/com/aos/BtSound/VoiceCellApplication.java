@@ -22,8 +22,8 @@ public class VoiceCellApplication extends Application {
 	public static Context mApplication = null;
 	// 装载联系人信息
 	public static List<ContactInfo> mContacts = new ArrayList<ContactInfo>();
-	// 短信播报开关
-	public static boolean isReadSMS = true;
+
+	public static int mSc = 0;
 
 	@Override
 	public void onCreate() {
@@ -31,7 +31,7 @@ public class VoiceCellApplication extends Application {
 		mApplication = this;
 		// 初始化科大讯飞模块
 		StringBuffer param = new StringBuffer();
-		param.append("appid=4fd96987");
+		param.append("appid=561f0604");
 		param.append(",");
 		param.append(SpeechConstant.ENGINE_MODE+"="+SpeechConstant.MODE_MSC);
 		SpeechUtility.createUtility(this, param.toString());
