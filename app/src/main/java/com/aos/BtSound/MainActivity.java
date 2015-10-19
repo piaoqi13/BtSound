@@ -29,6 +29,7 @@ import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.receiver.SMSReceiver;
+import com.aos.BtSound.recorder.MyMediaRecorder;
 import com.aos.BtSound.setting.IatSettings;
 import com.aos.BtSound.util.FucUtil;
 import com.aos.BtSound.util.JsonParser;
@@ -66,7 +67,6 @@ public class MainActivity extends Activity implements OnClickListener {
     private EditText mEdtTransformResult = null;
 
     private SpeechRecognizer mSpeechRecognizer = null;  // 语音对象
-    private AudioManager mAudioManager = null;          // 音频管理类
     private BluetoothAdapter mBluetoothAdapter = null;  // 蓝牙适配器
     private RecognizerDialog mRecognizerDialog = null;  // 语音对话框
     private String mSmsBody = null;                     // 短信内容
@@ -102,6 +102,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private String mContent;                            // 语法、词典临时变量
     private int ret = 0;                                // 函数回值
 
+    private MyMediaRecorder mMyMediaRecorder;
+
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -110,8 +112,9 @@ public class MainActivity extends Activity implements OnClickListener {
                         showSoundHint();
                     break;
                 case 1:
-                    Toast.makeText(MainActivity.this, "启动蓝牙麦克风失败", Toast.LENGTH_SHORT).show();
-                    mAudioManager.stopBluetoothSco();
+                    // 停止录音；
+                    mMyMediaRecorder.stopRecording();
+                    showTip("录音结束");
                     break;
 
                 case 2:
@@ -131,7 +134,6 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
         mBluetoothHelper = new BluetoothHelper(this);
         mContext = this;
@@ -201,6 +203,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnWeb.setOnClickListener(this);
         mBtnSettings.setOnClickListener(this);
         mBtnInstruction.setOnClickListener(this);
+        findViewById(R.id.btn_recorder).setOnClickListener(this);
     }
 
     private void buildGrammar() {
@@ -331,6 +334,8 @@ public class MainActivity extends Activity implements OnClickListener {
                         MainActivity.this.startActivity(intent);
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
                         mWakeUpRecognizer.start();
+                    } else if (text.contains("录音")) {
+                        onClick(findViewById(R.id.btn_recorder));
                     }
                 }
             } else {
@@ -384,6 +389,20 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.btn_navigation:
                 Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
                 MainActivity.this.startActivity(intent);
+                break;
+            case R.id.btn_recorder:
+                // 停止唤醒录音
+                mWakeUpRecognizer.stop();
+
+                mMyMediaRecorder = new MyMediaRecorder();
+                mMyMediaRecorder.startRecording();
+                mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        showTip("正在录音，10s 中后自动结束");
+                    }
+                });
+
                 break;
             case R.id.btn_web:
                 openWeb();
