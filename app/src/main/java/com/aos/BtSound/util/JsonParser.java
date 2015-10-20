@@ -29,6 +29,18 @@ public class JsonParser {
         return ret.toString();
     }
 
+    public static String parseSpeechUnderstanderResult(String json) {
+        String text = "";
+        try {
+            JSONTokener tokener = new JSONTokener(json);
+            JSONObject joResult = new JSONObject(tokener);
+            text = joResult.getString("text");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return text;
+    }
+
     public static String parseGrammarResult(String json, String engType) {
         StringBuffer firstName = new StringBuffer();
         try {
