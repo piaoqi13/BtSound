@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import com.aos.BtSound.R;
 import com.aos.BtSound.VoiceCellApplication;
+import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.model.SmsInfo;
 import com.aos.BtSound.preference.Config;
@@ -59,10 +60,14 @@ public class SMSReceiver extends ContentObserver {
 	// 吐司提示
 	private Toast mToast = null;
 
-	public SMSReceiver(Handler handler, Context context) {
+    // 蓝牙检测
+    private BluetoothHeadsetUtils mBlueHelper;
+
+	public SMSReceiver(Handler handler, Context context, BluetoothHeadsetUtils bluetoothHelper) {
 		super(new Handler());
 		this.mActivity = (Activity)context;
 		this.mHandler = handler;
+        mBlueHelper = bluetoothHelper;
 		// 初始化合成对象
 		mTts = SpeechSynthesizer.createSynthesizer(context, mTtsInitListener);
 		mToast = Toast.makeText(context, "", Toast.LENGTH_SHORT);
@@ -79,6 +84,12 @@ public class SMSReceiver extends ContentObserver {
 				for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
 					if (mSmsInfos.get(0).getPhoneNumber().replace("+86", "").equals(VoiceCellApplication.mContacts.get(i).getPhoneNumber().replace(" ", ""))) {
 						setParam();
+
+                        // 断开蓝牙 SCO 连接
+                        if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
+                            mBlueHelper.stop();
+                        // 断开蓝牙 SCO 连接
+
 						int code = mTts.startSpeaking("有短信息进来，内容是" + mSmsInfos.get(0).getSmsbody(), mTtsListener);
 						if (code != ErrorCode.SUCCESS) {
 							showTip("语音合成未成功，错误码: " + code);
@@ -170,6 +181,12 @@ public class SMSReceiver extends ContentObserver {
 		public void onCompleted(SpeechError error) {
 			if (error == null) {
 				showTip("播放完成");
+
+                // 播放完成后，连接上蓝牙 SCO
+                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
+                    mBlueHelper.start();
+                // 播放完成后，连接上蓝牙 SCO
+
 			} else if (error != null) {
 				showTip(error.getPlainDescription(true));
 			}
