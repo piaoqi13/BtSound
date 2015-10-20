@@ -454,7 +454,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        showTip("正在录音，10s 中后自动结束");
+                        showTip("正在录音，10s钟后自动结束");
                     }
                 });
                 break;
