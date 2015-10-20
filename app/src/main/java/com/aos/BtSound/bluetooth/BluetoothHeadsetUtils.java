@@ -31,7 +31,7 @@ public abstract class BluetoothHeadsetUtils
     private AudioManager mAudioManager;
     private boolean mIsCountDownOn;
     private boolean mIsStarting;
-    private boolean mIsOnHeadsetSco;
+    private static boolean mIsOnHeadsetSco;
     private boolean mIsStarted;
     private static final String TAG = "BluetoothHeadsetUtils"; //$NON-NLS-1$
     /**
@@ -96,6 +96,7 @@ public abstract class BluetoothHeadsetUtils
     {
         return mIsOnHeadsetSco;
     }
+
     public abstract void onHeadsetDisconnected();
     public abstract void onHeadsetConnected();
     public abstract void onScoAudioDisconnected();
