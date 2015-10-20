@@ -123,6 +123,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 case 4444:
                     upDateDictionary();
                     break;
+                case 6666:
+                    showTip("语义理解失败,错误码:" + ret);
+                    break;
+                case 8888:
+                    showTip(getString(R.string.text_begin));
+                    break;
             }
         }
     };
@@ -202,13 +208,6 @@ public class MainActivity extends Activity implements OnClickListener {
         mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
         mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
         ret = mAsr.buildGrammar(GRAMMAR_TYPE_BNF, mContent, grammarListener);
-
-        // 语法识别音频CollinWang1019
-        mAsr.setParameter(SpeechConstant.AUDIO_FORMAT, "pcm");
-        boolean isOk = mAsr.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/asr.pcm");
-
-        DebugLog.i("CollinWang", "isOk=" + isOk);
-
         if (ret != ErrorCode.SUCCESS) {
             showTip("语法构建未成功");
         }
@@ -233,6 +232,9 @@ public class MainActivity extends Activity implements OnClickListener {
         boolean result = false;
         mAsr.setParameter(SpeechConstant.PARAMS, null);
         mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mEngineType);
+        // 语法识别音频CollinWang1019
+        mAsr.setParameter(SpeechConstant.AUDIO_FORMAT, "pcm");
+        boolean isOk = mAsr.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/asr.pcm");
         if ("cloud".equalsIgnoreCase(mEngineType)) {
             String grammarId = mSharedPreferences.getString(KEY_GRAMMAR_ABNF_ID, null);
             if (TextUtils.isEmpty(grammarId)) {
@@ -264,6 +266,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mSpeechUnderstander.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("understander_vadbos_preference", "4000"));
         mSpeechUnderstander.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("understander_vadeos_preference", "1000"));
         mSpeechUnderstander.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("understander_punc_preference", "1"));
+        mSpeechUnderstander.setParameter(SpeechConstant.AUDIO_SOURCE, "-1");// 设置为-1，通过WriteAudio接口送入音频
         mSpeechUnderstander.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/iflytek/wavaudio.pcm");
     }
 
@@ -327,7 +330,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 if (text.equals("")) {
                     showTip("请清晰说话噢");
                 } else {
-                    if (text.contains("打电话") && VoiceCellApplication.mSc > 50) {
+                    if (text.contains("打电话") && VoiceCellApplication.mSc > 55) {
                         mEdtTransformResult.setText(text);
                         String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
                         for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
@@ -337,7 +340,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                 break;
                             }
                         }
-                    } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 50) {
+                    } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
                         // 语法理解去识别是否有数字号码
                         setSpeechUnderstanderParam();
                         if (mSpeechUnderstander.isUnderstanding()) {
@@ -351,7 +354,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             } catch (Exception e) {
                                 Log.i("CollinWang", "Catch=", e);
                                 showTip("请清晰说话噢");
-                                mWakeUpRecognizer.start();
+                                wakeUpStart();
                             }
                         }
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
@@ -359,7 +362,8 @@ public class MainActivity extends Activity implements OnClickListener {
                         Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
                         MainActivity.this.startActivity(intent);
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
-                        mWakeUpRecognizer.start();
+                        DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
+                        wakeUpStart();
                     } else if (text.contains("录音")) {
                         onClick(findViewById(R.id.btn_recorder));
                     }
@@ -393,13 +397,12 @@ public class MainActivity extends Activity implements OnClickListener {
                     writeaudio(buffers);
                 }
             } else {
-                mWakeUpRecognizer.start();
+                wakeUpStart();
             }
         }
 
         @Override
-        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) {
-        }
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) { }
     };
 
     private void showTip(final String str) {
@@ -519,35 +522,46 @@ public class MainActivity extends Activity implements OnClickListener {
                 public void run() {
                     if (null != result) {
                         String text = result.getResultString();
+                        DebugLog.i("CollinWang", "语法理解JSON=" + text);
                         if (!TextUtils.isEmpty(text)) {
-                            mEdtTransformResult.setText(text);
-                            DebugLog.i("CollinWang", "语法理解JSON=" + text);
+                            mEdtTransformResult.setText(JsonParser.parseSpeechUnderstanderResult(text));
+                            if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
+                                String number = FucUtil.getNumber(mEdtTransformResult.getText().toString());
+                                if (FucUtil.isAvailableMobilePhone(number)) {
+                                    Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
+                                    MainActivity.this.startActivity(intent);
+                                }
+                            }
+                        } else {
+                            showTip("请清晰说话噢");
+                            wakeUpStart();
                         }
                     } else {
-                        showTip("识别结果不正确");
+                        showTip("语法理解结果不正确");
+                        wakeUpStart();
                     }
                 }
             });
-        }
+            }
 
-        @Override
-        public void onVolumeChanged(int v) {
-            showTip("onVolumeChanged："	+ v);
-        }
+            @Override
+            public void onVolumeChanged(int v) {
+            showTip("正在进一步语法理解：" + v);
+            }
 
         @Override
         public void onEndOfSpeech() {
-            showTip("onEndOfSpeech");
-        }
+            showTip("结束语法理解");
+            }
 
-        @Override
-        public void onBeginOfSpeech() {
+            @Override
+            public void onBeginOfSpeech() {
             showTip("onBeginOfSpeech");
-        }
+            }
 
-        @Override
-        public void onError(SpeechError error) {
-            showTip("onError Code："	+ error.getErrorCode());
+            @Override
+            public void onError(SpeechError error) {
+            showTip("onError Code：" + error.getErrorCode());
             mWakeUpRecognizer.start();
         }
 
@@ -657,9 +671,9 @@ public class MainActivity extends Activity implements OnClickListener {
             public void run() {
                 ret = mSpeechUnderstander.startUnderstanding(understanderListener);
                 if (ret != 0) {
-                    showTip("语义理解失败,错误码:" + ret);
+                    mHandler.sendEmptyMessageDelayed(6666, 10);
                 } else {
-                    showTip(getString(R.string.text_begin));
+                    mHandler.sendEmptyMessageDelayed(8888, 10);
                 }
                 for (int i = 0; i < buffers.size(); i++) {
                     try {
