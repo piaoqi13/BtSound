@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.ContentObserver;
@@ -41,17 +42,13 @@ import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechRecognizer;
-import com.iflytek.cloud.SpeechUnderstander;
-import com.iflytek.cloud.SpeechUnderstanderListener;
-import com.iflytek.cloud.UnderstanderResult;
 import com.iflytek.cloud.ui.RecognizerDialog;
+import com.iflytek.cloud.ui.RecognizerDialogListener;
 import com.iflytek.cloud.util.ContactManager;
 import com.iflytek.cloud.util.ContactManager.ContactListener;
 import com.iflytek.cloud.util.ResourceUtil;
 import com.umeng.analytics.MobclickAgent;
 import com.umeng.update.UmengUpdateAgent;
-
-import java.util.ArrayList;
 
 import cn.yunzhisheng.common.USCError;
 import cn.yunzhisheng.wakeup.basic.WakeUpRecognizer;
@@ -68,42 +65,44 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button mBtnInstruction = null;
     private EditText mEdtTransformResult = null;
 
-    private SpeechRecognizer mSpeechRecognizer = null;          // 语音对象
-    private AudioManager mAudioManager = null;                  // 音频管理类
-    private BluetoothAdapter mBluetoothAdapter = null;          // 蓝牙适配器
-    private BluetoothHelper mBluetoothHelper = null;            // 蓝牙辅助类
-    private RecognizerDialog mRecognizerDialog = null;          // 语音对话框
-    private String mSmsBody = null;                             // 短信内容
+    private SpeechRecognizer mSpeechRecognizer = null;  // 语音对象
+    private AudioManager mAudioManager = null;          // 音频管理类
+    private BluetoothAdapter mBluetoothAdapter = null;  // 蓝牙适配器
+    private RecognizerDialog mRecognizerDialog = null;  // 语音对话框
+    private String mSmsBody = null;                     // 短信内容
     private SoundPool mSoundPool = null;
     private boolean mIsStarted = false;
 
-    private WakeUpRecognizer mWakeUpRecognizer = null;          // 唤醒对象
-    private Vibrator mVibrator = null;                          // 唤醒震动
+    private WakeUpRecognizer mWakeUpRecognizer = null;  // 唤醒对象
+    private Vibrator mVibrator = null;                  // 唤醒震动
 
-    private int mStartCount = 0;                                // 尝试打开蓝牙麦克风次数
+    private int mStartCount = 0;                        // 控制信息，尝试打开蓝牙麦克风次数；
+
     private ContentObserver mContentObserver = null;
-    private boolean mIsWakeUpStarted = false;                   // 跟踪语音唤醒是否开启
-    private SpeechRecognizer mAsr = null;                       // 语音识别对象
-    private Toast mToast = null;                                // 吐司提示
 
-    private SharedPreferences mSharedPreferences;               // 存储配置
-    private String mLocalGrammar = null;                        // 本地语法文件
-    private String mLocalLexicon = null;                        // 本地词典
-    private String mCloudGrammar = null;                        // 云端语法文件
+    // 跟踪语音唤醒是否开启；
+    private boolean mIsWakeUpStarted = false;
+
+    private SpeechRecognizer mAsr = null;               // 语音识别对象
+    private Toast mToast = null;                        // 吐司提示
+
+    private SharedPreferences mSharedPreferences;       // 存储配置
+    private String mLocalGrammar = null;                // 本地语法文件
+    private String mLocalLexicon = null;                // 本地词典
+    private String mCloudGrammar = null;                // 云端语法文件
+    // 本地语法构建路径
     private String grmPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/msc/test";
-    private String mResultType = "json";                        // Result结果格式支持Xml和JSON
+    private String mResultType = "json";                // Result结果格式支持XML和JSON
 
     private final String KEY_GRAMMAR_ABNF_ID = "grammar_abnf_id";
     private final String GRAMMAR_TYPE_ABNF = "abnf";
     private final String GRAMMAR_TYPE_BNF = "bnf";
 
-    private String mEngineType = "local";                       // 识别方式云端和本地
-    private String mContent;                                    // 语法、词典临时变量
-    private int ret = 0;                                        // 函数回值
+    private String mEngineType = "local";               // 识别方式云端和本地
+    private String mContent;                            // 语法、词典临时变量
+    private int ret = 0;                                // 函数回值
 
-    private SpeechUnderstander mSpeechUnderstander = null;      // 语义理解对象（语音到语义）
-
-    private Handler mHandler = new Handler() {
+    private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 0:
@@ -125,6 +124,9 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     };
 
+    // 蓝牙辅助类
+    private BluetoothHelper mBluetoothHelper;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -136,8 +138,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
         initView();
         setListener();
+
+        // 获取联系人信息
         ObtainContactsUtil.getInstance(mContext).getPhoneContacts();
 
+        // 友盟更新初始化
         UmengUpdateAgent.update(this);
 
         mAsr = SpeechRecognizer.createRecognizer(this, mInitListener);
@@ -156,9 +161,6 @@ public class MainActivity extends Activity implements OnClickListener {
 
         mContentObserver = new SMSReceiver(mHandler, this);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
-
-        // 初始化语法理解对象
-        mSpeechUnderstander = SpeechUnderstander.createUnderstander(this, speechUnderstanderListener);
     }
 
     @Override
@@ -167,9 +169,12 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
         mEdtTransformResult.setText("Speak Result");
+        DebugLog.d(DebugLog.TAG, "MainActivity:onResume " + "");
+
         initWakeUp();               // 初始化唤醒
         wakeUpStart();              // 启动唤醒
-        mBluetoothHelper.start();   // 启动检测蓝牙模块
+        //initRecognizer();           // 初始化语音识别
+        mBluetoothHelper.start();   // 启动、检测蓝牙模块
     }
 
     private void initView() {
@@ -180,7 +185,13 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnInstruction = (Button) findViewById(R.id.btn_instruction);
         mBtnSettings = (Button) findViewById(R.id.btn_settings);
         mEdtTransformResult = (EditText) findViewById(R.id.edt_result_text);
+
         mSharedPreferences = getSharedPreferences(IatSettings.PREFER_NAME, Activity.MODE_PRIVATE);
+        // 第一次上传联系人
+//        if (Settings.getBoolean(Config.IS_FIRST_TIME, true, false)) {
+//            ContactManager mgr = ContactManager.createManager(mContext, mContactListener);
+//            mgr.asyncQueryAllContactsName();
+//        }
     }
 
     private void setListener() {
@@ -200,13 +211,6 @@ public class MainActivity extends Activity implements OnClickListener {
         mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
         mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
         ret = mAsr.buildGrammar(GRAMMAR_TYPE_BNF, mContent, grammarListener);
-
-        // 语法识别音频CollinWang1019
-        mAsr.setParameter(SpeechConstant.AUDIO_FORMAT, "pcm");
-        boolean isOk = mAsr.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory()+"/msc/asr.pcm");
-
-        DebugLog.i("CollinWang", "isOk=" + isOk);
-
         if (ret != ErrorCode.SUCCESS) {
             showTip("语法构建未成功");
         }
@@ -249,20 +253,6 @@ public class MainActivity extends Activity implements OnClickListener {
             result = true;
         }
         return result;
-    }
-
-    public void setSpeechUnderstanderParam() {
-        String lag = mSharedPreferences.getString("understander_language_preference", "mandarin");
-        if (lag.equals("en_us")) {
-            mSpeechUnderstander.setParameter(SpeechConstant.LANGUAGE, "en_us");
-        } else {
-            mSpeechUnderstander.setParameter(SpeechConstant.LANGUAGE, "zh_cn");
-            mSpeechUnderstander.setParameter(SpeechConstant.ACCENT, lag);
-        }
-        mSpeechUnderstander.setParameter(SpeechConstant.VAD_BOS, mSharedPreferences.getString("understander_vadbos_preference", "4000"));
-        mSpeechUnderstander.setParameter(SpeechConstant.VAD_EOS, mSharedPreferences.getString("understander_vadeos_preference", "1000"));
-        mSpeechUnderstander.setParameter(SpeechConstant.ASR_PTT, mSharedPreferences.getString("understander_punc_preference", "1"));
-        mSpeechUnderstander.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/iflytek/wavaudio.pcm");
     }
 
     private String getResourcePath() {
@@ -325,7 +315,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 if (text.equals("")) {
                     showTip("请清晰说话噢");
                 } else {
-                    if (text.contains("打电话") && VoiceCellApplication.mSc > 50) {
+                    if (text.contains("打电话")) {
                         mEdtTransformResult.setText(text);
                         String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
                         for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
@@ -333,23 +323,6 @@ public class MainActivity extends Activity implements OnClickListener {
                                 Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                                 MainActivity.this.startActivity(intent);
                                 break;
-                            }
-                        }
-                    } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 50) {
-                        // 语法理解去识别是否有数字号码
-                        setSpeechUnderstanderParam();
-                        if (mSpeechUnderstander.isUnderstanding()) {
-                            mSpeechUnderstander.stopUnderstanding();
-                        } else {
-                            try {
-                                String file_path = Environment.getExternalStorageDirectory()+"/msc/asr.pcm";
-                                byte[] data = FucUtil.readFileFromSDcard(MainActivity.this, file_path);
-                                ArrayList<byte[]> buffers = FucUtil.splitBuffer(data, data.length, 1280);
-                                writeaudio(buffers);
-                            } catch (Exception e) {
-                                Log.i("CollinWang", "Catch=", e);
-                                showTip("请清晰说话噢");
-                                mWakeUpRecognizer.start();
                             }
                         }
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
@@ -377,25 +350,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
         @Override
         public void onError(SpeechError error) {
-            DebugLog.i("CollinWang", "onError Code：" + error.getErrorCode());
-            if (error.getErrorCode() == 20005) {
-                setSpeechUnderstanderParam();
-                if (mSpeechUnderstander.isUnderstanding()) {
-                    mSpeechUnderstander.stopUnderstanding();
-                } else {
-                    String file_path = Environment.getExternalStorageDirectory()+"/msc/asr.pcm";
-                    byte[] data = FucUtil.readFileFromSDcard(MainActivity.this, file_path);
-                    ArrayList<byte[]> buffers = FucUtil.splitBuffer(data, data.length, 1280);
-                    writeaudio(buffers);
-                }
-            } else {
-                mWakeUpRecognizer.start();
-            }
+            showTip("onError Code：" + error.getErrorCode());
+            mWakeUpRecognizer.start();
         }
 
         @Override
-        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) {
-        }
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) { }
     };
 
     private void showTip(final String str) {
@@ -453,8 +413,10 @@ public class MainActivity extends Activity implements OnClickListener {
                     playSound(sampleId);
                     mHandler.postDelayed(new Runnable() {
                         public void run() {
+                            // release sound
                             mHandler.obtainMessage(2).sendToTarget();
                             mIsStarted = false;
+                            //showSpeakDialog();
                             if (!setParam()) {
                                 showTip("请构建语法再语音识别");
                                 return;
@@ -474,79 +436,143 @@ public class MainActivity extends Activity implements OnClickListener {
         mSoundPool.play(id, 0.5f, 0.5f, 1, 1, 1f);
     }
 
+//    private void showSpeakDialog() {
+//        mEdtTransformResult.setText(null);
+//        setParam();
+//        boolean isShowDialogII = mSharedPreferences.getBoolean(getString(R.string.pref_key_iat_show), true);
+//        if (isShowDialogII) {
+//            mRecognizerDialog.setListener(recognizerDialogListener);
+//            mRecognizerDialog.show();
+//            mWakeUpRecognizer.stop();
+//        } else {
+//            int errorCode = mSpeechRecognizer.startListening(recognizerListener);
+//            if (errorCode != ErrorCode.SUCCESS) {
+//                Toast toastII = Toast.makeText(mContext, "听写失败" + errorCode, Toast.LENGTH_LONG);
+//                toastII.show();
+//            }
+//        }
+//
+//    }
+
     private InitListener mInitListener = new InitListener() {
         @Override
         public void onInit(int code) {
             if (code != ErrorCode.SUCCESS) {
-                showTip("初始化失败");
+                Toast toast = Toast.makeText(mContext, "初始化失败", Toast.LENGTH_LONG);
+                toast.show();
             }
         }
     };
 
-    private InitListener speechUnderstanderListener = new InitListener() {
+    private RecognizerListener recognizerListener = new RecognizerListener() {
         @Override
-        public void onInit(int code) {
-            DebugLog.d(DebugLog.TAG, "speechUnderstanderListener init() code = " + code);
-            if (code != ErrorCode.SUCCESS) {
-                showTip("初始化失败,错误码：" +code);
-            }
-        }
-    };
-
-    private SpeechUnderstanderListener understanderListener = new SpeechUnderstanderListener() {
-        @Override
-        public void onResult(final UnderstanderResult result) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (null != result) {
-                        String text = result.getResultString();
-                        if (!TextUtils.isEmpty(text)) {
-                            mEdtTransformResult.setText(text);
-                            DebugLog.i("CollinWang", "语法理解JSON=" + text);
-                        }
-                    } else {
-                        showTip("识别结果不正确");
-                    }
-                }
-            });
-        }
-
-        @Override
-        public void onVolumeChanged(int v) {
-            showTip("onVolumeChanged："	+ v);
+        public void onBeginOfSpeech() {
+            //ToDo
         }
 
         @Override
         public void onEndOfSpeech() {
-            showTip("onEndOfSpeech");
-        }
-
-        @Override
-        public void onBeginOfSpeech() {
-            showTip("onBeginOfSpeech");
+            //ToDo
         }
 
         @Override
         public void onError(SpeechError error) {
-            showTip("onError Code："	+ error.getErrorCode());
-            mWakeUpRecognizer.start();
+            DebugLog.i("CollinWang", "Information=" + error.getPlainDescription(true));
         }
 
         @Override
-        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) { }
+        public void onResult(RecognizerResult results, boolean isLast) {
+            String text = JsonParser.parseIatResult(results.getResultString());
+            mEdtTransformResult.append(text);
+            mEdtTransformResult.setSelection(mEdtTransformResult.length());
+            if (isLast) {
+                //ToDo
+            }
+        }
+
+        @Override
+        public void onVolumeChanged(int volume) {
+            //ToDo
+        }
+
+        @Override
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) {
+            //ToDo
+        }
     };
 
+    private RecognizerDialogListener recognizerDialogListener = new RecognizerDialogListener() {
+
+
+        public void onResult(RecognizerResult result, boolean isLast) {
+            DebugLog.d(DebugLog.TAG, "MainActivity:onResult "
+                    + "CollinWang" + "RecognizerResult=" + result.getResultString());
+
+            String text = JsonParser.parseIatResult(result.getResultString());
+            mEdtTransformResult.append(text);
+            mEdtTransformResult.setSelection(mEdtTransformResult.length());
+
+            if (mEdtTransformResult.getText().toString().contains("拍照")) {
+                Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                MainActivity.this.startActivity(intent);
+            }
+
+            if (VoiceCellApplication.mContacts != null) {   // 联系人不是空
+                if (mEdtTransformResult.getText().toString().contains("打电话")) {// 是打电话
+                    if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
+                        String number = FucUtil.getNumber(mEdtTransformResult.getText().toString());
+                        if (FucUtil.isAvailableMobilePhone(number)) {
+                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
+                            MainActivity.this.startActivity(intent);
+                        }
+                    } else {
+                        for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName()) ||
+                                    VoiceCellApplication.mContacts.get(i).getName().contains(text.replaceAll("[\\p{Punct}\\s]+", "").replace("打电话给", ""))) {
+                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                MainActivity.this.startActivity(intent);
+                                break;
+                            }
+                        }
+                    }
+                } else if (mEdtTransformResult.getText().toString().contains("发短信")) {  // 发短信
+                    for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                        if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                            Uri smsToUri = Uri.parse("smsto:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber());
+                            Intent intent = new Intent(Intent.ACTION_SENDTO, smsToUri);
+                            intent.putExtra("sms_body", mSmsBody);
+                            MainActivity.this.startActivity(intent);
+                            break;
+                        }
+                    }
+                } else {// 拿到短信内容
+                    mSmsBody = mEdtTransformResult.getText().toString();
+                }
+            } else {
+                DebugLog.d(DebugLog.TAG, "MainActivity:onResult " + "CollinWang" + "没有联系人");
+            }
+
+            // 科大讯飞结束 云知声走起
+//            mWakeUpRecognizer.start();
+        }
+
+        public void onError(SpeechError error) {
+            DebugLog.d(DebugLog.TAG, "MainActivity:onError "
+                    + "CollinWang" + "Information=" + error.getPlainDescription(true));
+        }
+    };
+
+    // 初始化本地离线唤醒
     private void initWakeUp() {
-        if (mWakeUpRecognizer != null)
-            return;
+        if(mWakeUpRecognizer != null) return;
 
         mWakeUpRecognizer = new WakeUpRecognizer(this, Config.appKey);
         mWakeUpRecognizer.setListener(new WakeUpRecognizerListener() {
 
             @Override
             public void onWakeUpRecognizerStart() {
-                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart " + "CollinWang" + "语音唤醒已开始");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStart "
+                        + "CollinWang" + "语音唤醒已开始");
                 Toast.makeText(MainActivity.this, "语音唤醒已开始", Toast.LENGTH_SHORT).show();
                 mIsWakeUpStarted = true;
             }
@@ -554,14 +580,16 @@ public class MainActivity extends Activity implements OnClickListener {
             @Override
             public void onWakeUpError(USCError error) {
                 if (error != null) {
-                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpError " + "CollinWang" + "Information=" + error.toString());
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpError "
+                            + "CollinWang" + "Information=" + error.toString());
                 }
                 mIsWakeUpStarted = false;
             }
 
             @Override
             public void onWakeUpRecognizerStop() {
-                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStop " + "CollinWang" + "语音唤醒已停止");
+                DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStop "
+                        + "CollinWang" + "语音唤醒已停止");
                 mIsWakeUpStarted = false;
             }
 
@@ -570,8 +598,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult " + "succeed : " + succeed);
                 if (succeed) {
                     mVibrator.vibrate(300);
-                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult " + "CollinWang" + "语音唤醒成功");
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult "
+                            + "CollinWang" + "语音唤醒成功");
+
+                    // 云知声结束停止
                     mWakeUpRecognizer.stop();
+                    //showSpeakDialog();
                     if (!setParam()) {
                         showTip("请构建语法再语音识别");
                         return;
@@ -585,20 +617,51 @@ public class MainActivity extends Activity implements OnClickListener {
         });
     }
 
+    // 启动语音唤醒
     protected void wakeUpStart() {
-        if (mWakeUpRecognizer.isRunning())
-            return;
-        mWakeUpRecognizer.start();
+        if(mWakeUpRecognizer.isRunning()) return;
+            mWakeUpRecognizer.start();
+    }
+
+    private void initRecognizer() {
+        if(mSpeechRecognizer == null)
+            // 初始化语音模块
+            mSpeechRecognizer = SpeechRecognizer.createRecognizer(this, mInitListener);
+
+        if(mRecognizerDialog == null) {
+            mRecognizerDialog = new RecognizerDialog(this, mInitListener);
+
+            mRecognizerDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                public void onDismiss(DialogInterface dialog) {
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onDismiss " + "");
+                    if(mWakeUpRecognizer != null)
+                        mWakeUpRecognizer.start();
+                }
+            });
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        DebugLog.d(DebugLog.TAG, "MainActivity:onPause " + "");
+
         MobclickAgent.onPageEnd(mPageName);
         MobclickAgent.onPause(this);
         mBluetoothHelper.stop();
+//        stopSppechRecognizer();
         stopWakeupRecognizer();
     }
+
+//    private void stopSppechRecognizer() {
+//        mSpeechRecognizer.cancel();
+//        mSpeechRecognizer.destroy();
+//        mSpeechRecognizer = null;
+//
+//        if(mRecognizerDialog.isShowing())
+//            mRecognizerDialog.dismiss();
+//        mRecognizerDialog = null;
+//    }
 
     private void stopWakeupRecognizer() {
         mWakeUpRecognizer.stop();
@@ -630,30 +693,5 @@ public class MainActivity extends Activity implements OnClickListener {
         public void onHeadsetConnected() {
             DebugLog.d(DebugLog.TAG, "BluetoothHelper:onHeadsetConnected " + "");
         }
-    }
-
-    public void writeaudio(final ArrayList<byte[]> buffers) {
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                ret = mSpeechUnderstander.startUnderstanding(understanderListener);
-                if (ret != 0) {
-                    showTip("语义理解失败,错误码:" + ret);
-                } else {
-                    showTip(getString(R.string.text_begin));
-                }
-                for (int i = 0; i < buffers.size(); i++) {
-                    try {
-                        mSpeechUnderstander.writeAudio(buffers.get(i), 0, buffers.get(i).length);
-                        Thread.sleep(40);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                mSpeechUnderstander.stopUnderstanding();
-            }
-
-        }).start();
     }
 }
