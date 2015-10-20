@@ -115,6 +115,8 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 停止录音；
                     mMyMediaRecorder.stopRecording();
                     showTip("录音结束");
+
+                    mWakeUpRecognizer.start();// 重新开启唤醒 录音
                     break;
 
                 case 2:
@@ -432,6 +434,8 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.btn_recorder:
                 // 停止唤醒录音
                 mWakeUpRecognizer.stop();
+                // 停止语音识别录音
+                mAsr.stopListening();
 
                 mMyMediaRecorder = new MyMediaRecorder();
                 mMyMediaRecorder.startRecording();
