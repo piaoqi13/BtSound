@@ -115,7 +115,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 停止录音；
                     mMyMediaRecorder.stopRecording();
                     showTip("录音结束");
-
+                    mEdtTransformResult.setText("Speak Result");
                     mWakeUpRecognizer.start();// 重新开启唤醒 录音
                     break;
 
@@ -176,9 +176,11 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
         mEdtTransformResult.setText("Speak Result");
-        initWakeUp();               // 初始化唤醒
-        wakeUpStart();              // 启动唤醒
-        mBluetoothHelper.start();   // 启动检测蓝牙模块
+        mSpeechUnderstander.stopUnderstanding();        // 停止语法理解
+        mAsr.stopListening();                           // 停止语法识别
+        initWakeUp();                                   // 初始化唤醒
+        wakeUpStart();                                  // 再启动唤醒
+        mBluetoothHelper.start();                       // 启动检测蓝牙模块
     }
 
     private void initView() {
@@ -337,9 +339,16 @@ public class MainActivity extends Activity implements OnClickListener {
                         String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
                         for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                             if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
-                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
-                                MainActivity.this.startActivity(intent);
-                                break;
+                                if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
+                                    Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                    MainActivity.this.startActivity(intent);
+                                    break;
+                                } else {
+                                    Log.i("CollinWang", "要拨打联系人没有对应号码噢");
+                                    showTip("要拨打联系人没有对应号码噢");
+                                    wakeUpStart();
+                                    mEdtTransformResult.setText("Speak Result");
+                                }
                             }
                         }
                     } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
@@ -439,7 +448,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 mWakeUpRecognizer.stop();
                 // 停止语音识别录音
                 mAsr.stopListening();
-
+                mEdtTransformResult.setText("正在录音...");
                 mMyMediaRecorder = new MyMediaRecorder();
                 mMyMediaRecorder.startRecording();
                 mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
@@ -448,7 +457,6 @@ public class MainActivity extends Activity implements OnClickListener {
                         showTip("正在录音，10s 中后自动结束");
                     }
                 });
-
                 break;
             case R.id.btn_web:
                 openWeb();
@@ -528,13 +536,23 @@ public class MainActivity extends Activity implements OnClickListener {
                         String text = result.getResultString();
                         DebugLog.i("CollinWang", "语法理解JSON=" + text);
                         if (!TextUtils.isEmpty(text)) {
-                            mEdtTransformResult.setText(JsonParser.parseSpeechUnderstanderResult(text));
-                            if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
+                            if (!FucUtil.getNumber(text).equals("")) {
+                                mEdtTransformResult.setText(JsonParser.parseSpeechUnderstanderResult(text));
                                 String number = FucUtil.getNumber(mEdtTransformResult.getText().toString());
                                 if (FucUtil.isAvailableMobilePhone(number)) {
                                     Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
                                     MainActivity.this.startActivity(intent);
+                                } else {
+                                    //showTip("请清晰说出您要拨打的号码噢");
+                                    mEdtTransformResult.setText("请清晰说出您要拨打的号码");
+                                    DebugLog.i("CollinWang", "语法理解不是标准数字号码");
+                                    wakeUpStart();
                                 }
+                            } else {
+                                showTip("请清晰说出您要拨打的号码噢");
+                                mEdtTransformResult.setText("Speak Result");
+                                DebugLog.i("CollinWang", "语法理解不是数字号码");
+                                wakeUpStart();
                             }
                         } else {
                             showTip("请清晰说话噢");
@@ -691,5 +709,14 @@ public class MainActivity extends Activity implements OnClickListener {
             }
 
         }).start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mSpeechUnderstander.cancel();
+        mSpeechUnderstander.destroy();
+        mAsr.cancel();
+        mAsr.destroy();
     }
 }
