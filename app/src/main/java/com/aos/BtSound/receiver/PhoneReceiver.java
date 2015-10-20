@@ -117,21 +117,13 @@ public class PhoneReceiver extends BroadcastReceiver {
                     DebugLog.i("CollinWang", "来电号码=" + incomingNumber);
                     DebugLog.i("CollinWang", "名字=" + name);
 
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(0), AudioManager.FLAG_PLAY_SOUND);
-
                     if (name.equals("")) {
                         tip = "请注意号码" + incomingNumber + "正在呼叫您";
                     } else {
                         tip = "请注意" + name + "正在呼叫您";
                     }
 
-
                     mHandler.sendEmptyMessageDelayed(4444, 1500);
-                    // 获取音量
-                    int max = audio.getStreamMaxVolume(AudioManager.STREAM_RING);
-                    int current = audio.getStreamVolume(AudioManager.STREAM_RING);
-                    DebugLog.i("CollinWang", "来电max=" + max + "；current=" + current);
                     break;
             }
         }

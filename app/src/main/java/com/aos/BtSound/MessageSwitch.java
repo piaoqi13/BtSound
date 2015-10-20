@@ -31,12 +31,22 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     }
 
     private void initData() {
-        Settings.setBoolean(Config.IS_READ_SMS, true, false);
-        mBtnOpen.setTextColor(this.getResources().getColor(R.color.gray_text));
-        mBtnOpen.setEnabled(false);
-        mBtnOpen.setBackgroundColor(this.getResources().getColor(R.color.green_background));
-        mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.white_text));
-        mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
+        if (Settings.getBoolean(Config.IS_READ_SMS, true, false)) {
+            mBtnOpen.setTextColor(this.getResources().getColor(R.color.gray_text));
+            mBtnOpen.setEnabled(false);
+            mBtnClosed.setEnabled(true);
+            mBtnOpen.setBackgroundColor(this.getResources().getColor(R.color.green_background));
+            mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.white_text));
+            mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
+        } else {
+            mBtnOpen.setTextColor(this.getResources().getColor(R.color.black_text));
+            mBtnClosed.setEnabled(false);
+            mBtnOpen.setEnabled(true);
+            mBtnOpen.setBackgroundColor(this.getResources().getColor(R.color.white_text));
+            mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.gray_text));
+            mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
+        }
+
     }
 
     private void initListener() {
@@ -53,8 +63,8 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                 mBtnClosed.setEnabled(false);
                 mBtnOpen.setEnabled(true);
                 mBtnOpen.setBackgroundColor(this.getResources().getColor(R.color.white_text));
-                mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.green_background));
-                mBtnClosed.setTextColor(this.getResources().getColor(R.color.gray_text));
+                mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.gray_text));
+                mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
                 Toast.makeText(this, "已关闭", Toast.LENGTH_LONG).show();
                 break;
             case R.id.btn_open:
