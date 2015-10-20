@@ -163,7 +163,7 @@ public class MainActivity extends Activity implements OnClickListener {
         buildGrammar();
         mHandler.sendEmptyMessageDelayed(4444, 1000);
 
-        mContentObserver = new SMSReceiver(mHandler, this);
+        mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
 
         // 初始化语法理解对象
