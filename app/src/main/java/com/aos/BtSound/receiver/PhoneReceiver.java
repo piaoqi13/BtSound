@@ -59,6 +59,11 @@ public class PhoneReceiver extends BroadcastReceiver {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 4444:
+
+                    // 断开 SCO 连接
+                    if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
+                        mBlueHelper.stop();
+
                     setParam();// 设置参数
                     int code = mTts.startSpeaking(tip, mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
@@ -70,6 +75,11 @@ public class PhoneReceiver extends BroadcastReceiver {
             }
         }
     };
+
+    private BluetoothHeadsetUtils mBlueHelper;
+    public PhoneReceiver(BluetoothHeadsetUtils bleHelper) {
+        mBlueHelper = bleHelper;
+    }
 
     @SuppressLint("ShowToast")
     @Override
@@ -204,6 +214,11 @@ public class PhoneReceiver extends BroadcastReceiver {
         public void onCompleted(SpeechError error) {
             if (error == null) {
                 showTip("播放完成");
+
+                // 重新连接 sco
+                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
+                    mBlueHelper.start();
+
             } else if (error != null) {
                 showTip(error.getPlainDescription(true));
             }

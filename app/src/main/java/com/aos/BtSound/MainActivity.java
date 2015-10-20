@@ -5,6 +5,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.media.AudioManager;
@@ -27,6 +28,7 @@ import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
 import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
+import com.aos.BtSound.receiver.PhoneReceiver;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.recorder.MyMediaRecorder;
 import com.aos.BtSound.setting.IatSettings;
@@ -82,6 +84,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private int mStartCount = 0;                                // 尝试打开蓝牙麦克风次数
     private ContentObserver mContentObserver = null;
+    private PhoneReceiver mPhoneReceiver = null;
     private boolean mIsWakeUpStarted = false;                   // 跟踪语音唤醒是否开启
     private SpeechRecognizer mAsr = null;                       // 语音识别对象
     private Toast mToast = null;                                // 吐司提示
@@ -135,6 +138,7 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     };
 
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -181,6 +185,13 @@ public class MainActivity extends Activity implements OnClickListener {
         initWakeUp();                                   // 初始化唤醒
         wakeUpStart();                                  // 再启动唤醒
         mBluetoothHelper.start();                       // 启动检测蓝牙模块
+
+        mPhoneReceiver = new PhoneReceiver(mBluetoothHelper);
+        IntentFilter itf = new IntentFilter();
+        itf.addAction("android.intent.action.PHONE_STATE");
+        itf.addAction("android.intent.action.NEW_OUTGOING_CALL");
+        registerReceiver(mPhoneReceiver, itf);
+
     }
 
     private void initView() {
@@ -396,6 +407,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
         @Override
         public void onError(SpeechError error) {
+            if(error == null) {
+                DebugLog.i("CollinWang", "onError: error == null");
+                return;
+            }
+
             DebugLog.i("CollinWang", "onError Code：" + error.getErrorCode());
             if (error.getErrorCode() == 20005) {
                 setSpeechUnderstanderParam();
@@ -652,6 +668,8 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPause(this);
         mBluetoothHelper.stop();
         stopWakeupRecognizer();
+
+        unregisterReceiver(mPhoneReceiver);
     }
 
     private void stopWakeupRecognizer() {
