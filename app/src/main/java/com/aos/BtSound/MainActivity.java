@@ -103,6 +103,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private SpeechUnderstander mSpeechUnderstander = null;      // 语义理解对象（语音到语义）
     private MyMediaRecorder mMyMediaRecorder;
+    private boolean mWantToRecord;
 
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
@@ -115,8 +116,24 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 停止录音；
                     mMyMediaRecorder.stopRecording();
                     showTip("录音结束");
-
+                    mEdtTransformResult.setText("Speak Result");
                     mWakeUpRecognizer.start();// 重新开启唤醒 录音
+
+                    findViewById(R.id.btn_recorder).setClickable(true);
+                    mWantToRecord = false;
+                    break;
+
+                case 4:
+
+                    mEdtTransformResult.setText("正在录音...");
+                    mMyMediaRecorder = new MyMediaRecorder();
+                    mMyMediaRecorder.startRecording();
+                    mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            showTip("正在录音，10s钟后自动结束");
+                        }
+                    });
                     break;
 
                 case 2:
@@ -367,7 +384,9 @@ public class MainActivity extends Activity implements OnClickListener {
                         DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
                         wakeUpStart();
                     } else if (text.contains("录音")) {
-                        onClick(findViewById(R.id.btn_recorder));
+//                        onClick(findViewById(R.id.btn_recorder));
+                        mAsr.stopListening();
+                        mHandler.sendEmptyMessage(4);
                     }
                 }
             } else {
@@ -435,19 +454,13 @@ public class MainActivity extends Activity implements OnClickListener {
                 MainActivity.this.startActivity(intent);
                 break;
             case R.id.btn_recorder:
+
                 // 停止唤醒录音
                 mWakeUpRecognizer.stop();
                 // 停止语音识别录音
                 mAsr.stopListening();
-
-                mMyMediaRecorder = new MyMediaRecorder();
-                mMyMediaRecorder.startRecording();
-                mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        showTip("正在录音，10s 中后自动结束");
-                    }
-                });
+                mWantToRecord = true;
+                findViewById(R.id.btn_recorder).setClickable(false);
 
                 break;
             case R.id.btn_web:
@@ -599,6 +612,9 @@ public class MainActivity extends Activity implements OnClickListener {
             public void onWakeUpRecognizerStop() {
                 DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpRecognizerStop " + "CollinWang" + "语音唤醒已停止");
                 mIsWakeUpStarted = false;
+
+                if(mWantToRecord)
+                    mHandler.sendEmptyMessage(4);
             }
 
             @Override
