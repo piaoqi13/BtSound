@@ -5,6 +5,7 @@ import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.media.AudioManager;
@@ -27,6 +28,7 @@ import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
 import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
+import com.aos.BtSound.receiver.PhoneReceiver;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.recorder.MyMediaRecorder;
 import com.aos.BtSound.setting.IatSettings;
@@ -82,6 +84,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private int mStartCount = 0;                                // 尝试打开蓝牙麦克风次数
     private ContentObserver mContentObserver = null;
+    private PhoneReceiver mPhoneReceiver = null;
     private boolean mIsWakeUpStarted = false;                   // 跟踪语音唤醒是否开启
     private SpeechRecognizer mAsr = null;                       // 语音识别对象
     private Toast mToast = null;                                // 吐司提示
@@ -152,6 +155,7 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     };
 
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -193,9 +197,18 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
         mEdtTransformResult.setText("Speak Result");
-        initWakeUp();               // 初始化唤醒
-        wakeUpStart();              // 启动唤醒
-        mBluetoothHelper.start();   // 启动检测蓝牙模块
+        mSpeechUnderstander.stopUnderstanding();        // 停止语法理解
+        mAsr.stopListening();                           // 停止语法识别
+        initWakeUp();                                   // 初始化唤醒
+        wakeUpStart();                                  // 再启动唤醒
+        mBluetoothHelper.start();                       // 启动检测蓝牙模块
+
+        mPhoneReceiver = new PhoneReceiver(mBluetoothHelper);
+        IntentFilter itf = new IntentFilter();
+        itf.addAction("android.intent.action.PHONE_STATE");
+        itf.addAction("android.intent.action.NEW_OUTGOING_CALL");
+        registerReceiver(mPhoneReceiver, itf);
+
     }
 
     private void initView() {
@@ -354,9 +367,16 @@ public class MainActivity extends Activity implements OnClickListener {
                         String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
                         for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                             if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
-                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
-                                MainActivity.this.startActivity(intent);
-                                break;
+                                if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
+                                    Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                    MainActivity.this.startActivity(intent);
+                                    break;
+                                } else {
+                                    Log.i("CollinWang", "要拨打联系人没有对应号码噢");
+                                    showTip("要拨打联系人没有对应号码噢");
+                                    wakeUpStart();
+                                    mEdtTransformResult.setText("Speak Result");
+                                }
                             }
                         }
                     } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
@@ -406,6 +426,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
         @Override
         public void onError(SpeechError error) {
+            if(error == null) {
+                DebugLog.i("CollinWang", "onError: error == null");
+                return;
+            }
+
             DebugLog.i("CollinWang", "onError Code：" + error.getErrorCode());
             if (error.getErrorCode() == 20005) {
                 setSpeechUnderstanderParam();
@@ -541,13 +566,23 @@ public class MainActivity extends Activity implements OnClickListener {
                         String text = result.getResultString();
                         DebugLog.i("CollinWang", "语法理解JSON=" + text);
                         if (!TextUtils.isEmpty(text)) {
-                            mEdtTransformResult.setText(JsonParser.parseSpeechUnderstanderResult(text));
-                            if (!FucUtil.getNumber(mEdtTransformResult.getText().toString()).equals("")) {
+                            if (!FucUtil.getNumber(text).equals("")) {
+                                mEdtTransformResult.setText(JsonParser.parseSpeechUnderstanderResult(text));
                                 String number = FucUtil.getNumber(mEdtTransformResult.getText().toString());
                                 if (FucUtil.isAvailableMobilePhone(number)) {
                                     Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
                                     MainActivity.this.startActivity(intent);
+                                } else {
+                                    //showTip("请清晰说出您要拨打的号码噢");
+                                    mEdtTransformResult.setText("请清晰说出您要拨打的号码");
+                                    DebugLog.i("CollinWang", "语法理解不是标准数字号码");
+                                    wakeUpStart();
                                 }
+                            } else {
+                                showTip("请清晰说出您要拨打的号码噢");
+                                mEdtTransformResult.setText("Speak Result");
+                                DebugLog.i("CollinWang", "语法理解不是数字号码");
+                                wakeUpStart();
                             }
                         } else {
                             showTip("请清晰说话噢");
@@ -650,6 +685,8 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPause(this);
         mBluetoothHelper.stop();
         stopWakeupRecognizer();
+
+        unregisterReceiver(mPhoneReceiver);
     }
 
     private void stopWakeupRecognizer() {
@@ -707,5 +744,14 @@ public class MainActivity extends Activity implements OnClickListener {
             }
 
         }).start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mSpeechUnderstander.cancel();
+        mSpeechUnderstander.destroy();
+        mAsr.cancel();
+        mAsr.destroy();
     }
 }
