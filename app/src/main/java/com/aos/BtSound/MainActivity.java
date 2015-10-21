@@ -188,7 +188,7 @@ public class MainActivity extends Activity implements OnClickListener {
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
 
         // 初始化语法理解对象
-        mSpeechUnderstander = SpeechUnderstander.createUnderstander(this, speechUnderstanderListener);
+        //mSpeechUnderstander = SpeechUnderstander.createUnderstander(this, speechUnderstanderListener);
     }
 
     @Override
@@ -197,7 +197,7 @@ public class MainActivity extends Activity implements OnClickListener {
         MobclickAgent.onPageStart(mPageName);
         MobclickAgent.onResume(this);
         mEdtTransformResult.setText("Speak Result");
-        mSpeechUnderstander.stopUnderstanding();        // 停止语法理解
+        //mSpeechUnderstander.stopUnderstanding();        // 停止语法理解
         mAsr.stopListening();                           // 停止语法识别
         initWakeUp();                                   // 初始化唤醒
         wakeUpStart();                                  // 再启动唤醒
@@ -381,7 +381,7 @@ public class MainActivity extends Activity implements OnClickListener {
                         }
                     } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
                         // 语法理解去识别是否有数字号码
-                        setSpeechUnderstanderParam();
+                        /*setSpeechUnderstanderParam();
                         if (mSpeechUnderstander.isUnderstanding()) {
                             mSpeechUnderstander.stopUnderstanding();
                         } else {
@@ -395,7 +395,9 @@ public class MainActivity extends Activity implements OnClickListener {
                                 showTip("请清晰说话噢");
                                 wakeUpStart();
                             }
-                        }
+                        }*/
+                        showTip("请清晰说话噢");
+                        wakeUpStart();
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
                         mEdtTransformResult.setText(text);
                         Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
@@ -432,7 +434,7 @@ public class MainActivity extends Activity implements OnClickListener {
             }
 
             DebugLog.i("CollinWang", "onError Code：" + error.getErrorCode());
-            if (error.getErrorCode() == 20005) {
+            /*if (error.getErrorCode() == 20005) {
                 setSpeechUnderstanderParam();
                 if (mSpeechUnderstander.isUnderstanding()) {
                     mSpeechUnderstander.stopUnderstanding();
@@ -444,7 +446,9 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
             } else {
                 wakeUpStart();
-            }
+            }*/
+            showTip("错误码=" + error.getErrorCode());
+            wakeUpStart();
         }
 
         @Override
@@ -749,8 +753,8 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mSpeechUnderstander.cancel();
-        mSpeechUnderstander.destroy();
+        //mSpeechUnderstander.cancel();
+        //mSpeechUnderstander.destroy();
         mAsr.cancel();
         mAsr.destroy();
     }
