@@ -32,6 +32,7 @@ import com.aos.BtSound.receiver.PhoneReceiver;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.recorder.MyMediaRecorder;
 import com.aos.BtSound.setting.IatSettings;
+import com.aos.BtSound.setting.TtsSettings;
 import com.aos.BtSound.util.FucUtil;
 import com.aos.BtSound.util.JsonParser;
 import com.aos.BtSound.util.XmlParser;
@@ -44,8 +45,10 @@ import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechRecognizer;
+import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SpeechUnderstander;
 import com.iflytek.cloud.SpeechUnderstanderListener;
+import com.iflytek.cloud.SynthesizerListener;
 import com.iflytek.cloud.UnderstanderResult;
 import com.iflytek.cloud.ui.RecognizerDialog;
 import com.iflytek.cloud.util.ContactManager;
@@ -108,6 +111,14 @@ public class MainActivity extends Activity implements OnClickListener {
     private MyMediaRecorder mMyMediaRecorder;
     private boolean mWantToRecord;
 
+    private SpeechSynthesizer mTts = null;                      // 语音合成对象
+    public static String voicerCloud = "xiaoyan";               // 默认云端发音人
+    public static String voicerLocal = "xiaoyan";               // 默认本地发音人
+    private int mPercentForBuffering = 0;                       // 缓冲进度
+    private int mPercentForPlaying = 0;                         // 播放进度
+    private int mIndex = -1;                                    // 0是提示唤醒已成功；1是提示正在打电话；2是提示正在拍照；3是提示正在录音
+    private String mCallname = "";                              // 即将呼叫的联系人
+
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -119,15 +130,26 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 停止录音；
                     mMyMediaRecorder.stopRecording();
                     showTip("录音结束");
+                    // 停蓝牙CollinWang1101
+                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                        mBluetoothHelper.stop();
+                    }
+                    mWakeUpRecognizer.stop();
+                    // 语音提示唤醒成功CollinWang1101
+                    mIndex = 4;
+                    setSpeechSynthesizerParam();
+                    int code2 = mTts.startSpeaking("录音结束", mTtsListener);
+                    if (code2 != ErrorCode.SUCCESS) {
+                        showTip("语音合成失败,错误码: " + code2);
+                    } else {
+                        DebugLog.i("CollinWang", "code=" + code2);
+                    }
                     mEdtTransformResult.setText("Speak Result");
                     mWakeUpRecognizer.start();// 重新开启唤醒 录音
-
                     findViewById(R.id.btn_recorder).setClickable(true);
                     mWantToRecord = false;
                     break;
-
                 case 4:
-
                     mEdtTransformResult.setText("正在录音...");
                     mMyMediaRecorder = new MyMediaRecorder();
                     mMyMediaRecorder.startRecording();
@@ -138,7 +160,6 @@ public class MainActivity extends Activity implements OnClickListener {
                         }
                     });
                     break;
-
                 case 2:
                     mSoundPool.release();
                     break;
@@ -150,6 +171,22 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case 8888:
                     showTip(getString(R.string.text_begin));
+                    break;
+                case 44444:
+                    // 停蓝牙CollinWang1101
+                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                        mBluetoothHelper.stop();
+                    }
+                    mWakeUpRecognizer.stop();
+                    // 语音提示正在打电话CollinWang1101
+                    mIndex = 1;
+                    setSpeechSynthesizerParam();
+                    int code = mTts.startSpeaking("正在打电话给" + mCallname, mTtsListener);
+                    if (code != ErrorCode.SUCCESS) {
+                        showTip("语音合成失败,错误码: " + code);
+                    } else {
+                        DebugLog.i("CollinWang", "code=" + code);
+                    }
                     break;
             }
         }
@@ -189,6 +226,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
         // 初始化语法理解对象
         //mSpeechUnderstander = SpeechUnderstander.createUnderstander(this, speechUnderstanderListener);
+
+        // 初始化合成对象
+        mTts = SpeechSynthesizer.createSynthesizer(this, mTtsInitListener);
     }
 
     @Override
@@ -282,6 +322,9 @@ public class MainActivity extends Activity implements OnClickListener {
             mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
             mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
             mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
+            // 前后端点CollinWang1029
+            mAsr.setParameter(SpeechConstant.VAD_BOS, "6000");//default5000
+            mAsr.setParameter(SpeechConstant.VAD_EOS, "6000");//default1800
             result = true;
         }
         return result;
@@ -302,6 +345,31 @@ public class MainActivity extends Activity implements OnClickListener {
         mSpeechUnderstander.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/iflytek/wavaudio.pcm");
     }
 
+    private void setSpeechSynthesizerParam() {
+        mTts.setParameter(SpeechConstant.PARAMS, null);
+        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+            mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
+        } else {
+            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+            mTts.setParameter(ResourceUtil.TTS_RES_PATH, getSpeechSynthesizerResourcePath());
+            mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);
+        }
+        mSharedPreferences = this.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
+        mTts.setParameter(SpeechConstant.SPEED, mSharedPreferences.getString("speed_preference", "50"));
+        mTts.setParameter(SpeechConstant.PITCH, mSharedPreferences.getString("pitch_preference", "50"));
+        mTts.setParameter(SpeechConstant.VOLUME, mSharedPreferences.getString("volume_preference", "50"));
+        mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
+    }
+
+    private String getSpeechSynthesizerResourcePath() {
+        StringBuffer tempBuffer = new StringBuffer();
+        tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
+        tempBuffer.append(";");
+        tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/" + PhoneReceiver.voicerLocal + ".jet"));
+        return tempBuffer.toString();
+    }
+
     private String getResourcePath() {
         StringBuffer tempBuffer = new StringBuffer();
         tempBuffer.append(ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "asr/common.jet"));
@@ -319,6 +387,65 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     };
 
+    private SynthesizerListener mTtsListener = new SynthesizerListener() {
+        @Override
+        public void onSpeakBegin() {
+            showTip("开始播放");
+        }
+
+        @Override
+        public void onSpeakPaused() {
+            showTip("暂停播放");
+        }
+
+        @Override
+        public void onSpeakResumed() {
+            showTip("继续播放");
+        }
+
+        @Override
+        public void onBufferProgress(int percent, int beginPos, int endPos, String info) {
+            mPercentForBuffering = percent;
+        }
+
+        @Override
+        public void onSpeakProgress(int percent, int beginPos, int endPos) {
+            mPercentForPlaying = percent;
+            showTip(String.format(mContext.getString(R.string.tts_toast_format), mPercentForBuffering, mPercentForPlaying));
+        }
+
+        @Override
+        public void onCompleted(SpeechError error) {
+            if (error == null) {
+                showTip("播放完成");
+                if (mBluetoothHelper != null && !mBluetoothHelper.isOnHeadsetSco())
+                    mBluetoothHelper.start();
+                if (mIndex == 0) {
+                    // 启动语法识别CollinWang1101
+                    if (!setParam()) {
+                        showTip("请构建语法再语音识别");
+                        return;
+                    }
+                    ret = mAsr.startListening(mRecognizerListener);
+                    if (ret != ErrorCode.SUCCESS) {
+                        showTip("识别未成功，错误码: " + ret);
+                    }
+                } else if (mIndex == 1) {
+
+                } else if (mIndex == 2) {
+
+                } else if (mIndex == 3) {
+
+                }
+            } else if (error != null) {
+                showTip(error.getPlainDescription(true));
+            }
+        }
+
+        @Override
+        public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) { }
+    };
+
     private GrammarListener grammarListener = new GrammarListener() {
         @Override
         public void onBuildFinish(String grammarId, SpeechError error) {
@@ -332,6 +459,16 @@ public class MainActivity extends Activity implements OnClickListener {
                 DebugLog.d(DebugLog.TAG, "语法构建成功");
             } else {
                 showTip("语法构建未成功，错误码：" + error.getErrorCode());
+            }
+        }
+    };
+
+    private InitListener mTtsInitListener = new InitListener() {
+        @Override
+        public void onInit(int code) {
+            DebugLog.d("CollinWang", "InitListener init() code = " + code);
+            if (code != ErrorCode.SUCCESS) {
+                showTip("初始化失败，错误码：" + code);
             }
         }
     };
@@ -370,6 +507,8 @@ public class MainActivity extends Activity implements OnClickListener {
                                 if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
                                     Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                                     MainActivity.this.startActivity(intent);
+                                    mCallname = VoiceCellApplication.mContacts.get(i).getName();
+                                    mHandler.sendEmptyMessageDelayed(44444, 1500);
                                     break;
                                 } else {
                                     Log.i("CollinWang", "要拨打联系人没有对应号码噢");
@@ -399,15 +538,42 @@ public class MainActivity extends Activity implements OnClickListener {
                         showTip("请清晰说话噢");
                         wakeUpStart();
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
+                        // 停蓝牙CollinWang1101
+                        if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                            mBluetoothHelper.stop();
+                        }
+                        mWakeUpRecognizer.stop();
+                        // 语音提示唤醒成功CollinWang1101
+                        mIndex = 2;
+                        setSpeechSynthesizerParam();
+                        int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
+                        if (code != ErrorCode.SUCCESS) {
+                            showTip("语音合成失败,错误码: " + code);
+                        } else {
+                            DebugLog.i("CollinWang", "code=" + code);
+                        }
                         mEdtTransformResult.setText(text);
                         Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
                         MainActivity.this.startActivity(intent);
                     } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
                         DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
                         wakeUpStart();
-                    } else if (text.contains("录音")) {
-//                        onClick(findViewById(R.id.btn_recorder));
+                    } else if (text.contains("录音") && VoiceCellApplication.mSc > 60) {
                         mAsr.stopListening();
+                        // 停蓝牙CollinWang1101
+                        if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                            mBluetoothHelper.stop();
+                        }
+                        mWakeUpRecognizer.stop();
+                        // 语音提示唤醒成功CollinWang1101
+                        mIndex = 3;
+                        setSpeechSynthesizerParam();
+                        int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
+                        if (code != ErrorCode.SUCCESS) {
+                            showTip("语音合成失败,错误码: " + code);
+                        } else {
+                            DebugLog.i("CollinWang", "code=" + code);
+                        }
                         mHandler.sendEmptyMessage(4);
                     }
                 }
@@ -483,14 +649,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 MainActivity.this.startActivity(intent);
                 break;
             case R.id.btn_recorder:
-
                 // 停止唤醒录音
                 mWakeUpRecognizer.stop();
                 // 停止语音识别录音
                 mAsr.stopListening();
                 mWantToRecord = true;
                 findViewById(R.id.btn_recorder).setClickable(false);
-
                 break;
             case R.id.btn_web:
                 openWeb();
@@ -662,14 +826,19 @@ public class MainActivity extends Activity implements OnClickListener {
                 if (succeed) {
                     mVibrator.vibrate(300);
                     DebugLog.d(DebugLog.TAG, "MainActivity:onWakeUpResult " + "CollinWang" + "语音唤醒成功");
-                    mWakeUpRecognizer.stop();
-                    if (!setParam()) {
-                        showTip("请构建语法再语音识别");
-                        return;
+                    // 停蓝牙CollinWang1101
+                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                        mBluetoothHelper.stop();
                     }
-                    ret = mAsr.startListening(mRecognizerListener);
-                    if (ret != ErrorCode.SUCCESS) {
-                        showTip("识别未成功，错误码: " + ret);
+                    mWakeUpRecognizer.stop();
+                    // 语音提示唤醒成功CollinWang1101
+                    mIndex = 0;
+                    setSpeechSynthesizerParam();
+                    int code = mTts.startSpeaking("傲石语音已唤醒，请说指令", mTtsListener);
+                    if (code != ErrorCode.SUCCESS) {
+                        showTip("语音合成失败,错误码: " + code);
+                    } else {
+                        DebugLog.i("CollinWang", "code=" + code);
                     }
                 }
             }
