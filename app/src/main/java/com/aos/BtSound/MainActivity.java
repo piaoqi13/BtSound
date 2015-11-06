@@ -35,7 +35,6 @@ import com.aos.BtSound.setting.IatSettings;
 import com.aos.BtSound.setting.TtsSettings;
 import com.aos.BtSound.util.FucUtil;
 import com.aos.BtSound.util.JsonParser;
-import com.aos.BtSound.util.XmlParser;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.GrammarListener;
 import com.iflytek.cloud.InitListener;
@@ -174,10 +173,10 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case 44444:
                     // 停蓝牙CollinWang1101
-                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
-                        mBluetoothHelper.stop();
-                    }
-                    mWakeUpRecognizer.stop();
+//                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                    //                        mBluetoothHelper.stop();
+                    //                    }
+                    //                    mWakeUpRecognizer.stop();
                     // 语音提示正在打电话CollinWang1101
                     mIndex = 1;
                     setSpeechSynthesizerParam();
@@ -317,14 +316,22 @@ public class MainActivity extends Activity implements OnClickListener {
                 result = true;
             }
         } else {
+            // 设置混合模式CollinWang1105
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_MIX);
+            mAsr.setParameter("asr_sch", "1");
+            mAsr.setParameter(SpeechConstant.NLP_VERSION, "2.0");
+            mAsr.setParameter(SpeechConstant.RESULT_TYPE, "json");
+            mAsr.setParameter("mixed_type", "delay");//混合模式的类型
+            //mAsr.setParameter("local_prior", "1");
+
             mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
             mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
             mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
             mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
             mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
             // 前后端点CollinWang1029
-            mAsr.setParameter(SpeechConstant.VAD_BOS, "6000");//default5000
-            mAsr.setParameter(SpeechConstant.VAD_EOS, "6000");//default1800
+            mAsr.setParameter(SpeechConstant.VAD_BOS, "4000");//default5000
+            mAsr.setParameter(SpeechConstant.VAD_EOS, "1000");//default1800
             result = true;
         }
         return result;
@@ -491,35 +498,99 @@ public class MainActivity extends Activity implements OnClickListener {
             if (null != result && !TextUtils.isEmpty(result.getResultString())) {
                 DebugLog.d(DebugLog.TAG, "Recognizer Result=" + result.getResultString());
                 String text = "";
+                String contact = "";
                 if (mResultType.equals("json")) {
-                    text = JsonParser.parseGrammarResult(result.getResultString(), mEngineType);
-                } else if (mResultType.equals("xml")) {
-                    text = XmlParser.parseNluResult(result.getResultString());
-                }
-                if (text.equals("")) {
-                    showTip("请清晰说话噢");
-                } else {
-                    if (text.contains("打电话") && VoiceCellApplication.mSc > 55) {
+                    Log.i("CollinWang", "ishaveCall=" + JsonParser.isHaveCallOrText(result.getResultString()));
+                    if (JsonParser.isHaveCallOrText(result.getResultString())) {
+                        text = JsonParser.parseMixNameResultText(result.getResultString());
+                        // 直接打电话出去
                         mEdtTransformResult.setText(text);
-                        String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
-                        for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
-                            if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
-                                if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
-                                    Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
-                                    MainActivity.this.startActivity(intent);
-                                    mCallname = VoiceCellApplication.mContacts.get(i).getName();
-                                    mHandler.sendEmptyMessageDelayed(44444, 1500);
-                                    break;
-                                } else {
-                                    Log.i("CollinWang", "要拨打联系人没有对应号码噢");
-                                    showTip("要拨打联系人没有对应号码噢");
-                                    wakeUpStart();
-                                    mEdtTransformResult.setText("Speak Result");
+                        if (text.contains("打电话")) {
+                            if (FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
+                                contact = FucUtil.getNumber(text);// 此时是数字号码
+                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
+                                MainActivity.this.startActivity(intent);
+                                mCallname = contact;
+                                mHandler.sendEmptyMessageDelayed(44444, 1500);
+                            } else {
+                                contact = JsonParser.parseMixNameResult(result.getResultString());
+                                for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                                    if (contact.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                                        if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
+                                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                            MainActivity.this.startActivity(intent);
+                                            mCallname = VoiceCellApplication.mContacts.get(i).getName();
+                                            mHandler.sendEmptyMessageDelayed(44444, 1500);
+                                            break;
+                                        } else {
+                                            Log.i("CollinWang", "要拨打联系人没有对应号码噢");
+                                            showTip("要拨打联系人没有对应号码噢");
+                                            wakeUpStart();
+                                            mEdtTransformResult.setText("Speak Result");
+                                        }
+                                    }
                                 }
                             }
+                        } else if (text.contains("拍照")) {
+                            // 停蓝牙CollinWang1101
+                            if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                                mBluetoothHelper.stop();
+                            }
+                            mWakeUpRecognizer.stop();
+                            // 语音提示唤醒成功CollinWang1101
+                            mIndex = 2;
+                            setSpeechSynthesizerParam();
+                            int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
+                            if (code != ErrorCode.SUCCESS) {
+                                showTip("语音合成失败,错误码: " + code);
+                            } else {
+                                DebugLog.i("CollinWang", "code=" + code);
+                            }
+                            mEdtTransformResult.setText(text);
+                            Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                            MainActivity.this.startActivity(intent);
+                        } else if (text.contains("录音")) {
+                            mAsr.stopListening();
+                            // 停蓝牙CollinWang1101
+                            if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                                mBluetoothHelper.stop();
+                            }
+                            mWakeUpRecognizer.stop();
+                            // 语音提示唤醒成功CollinWang1101
+                            mIndex = 3;
+                            setSpeechSynthesizerParam();
+                            int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
+                            if (code != ErrorCode.SUCCESS) {
+                                showTip("语音合成失败,错误码: " + code);
+                            } else {
+                                DebugLog.i("CollinWang", "code=" + code);
+                            }
+                            mHandler.sendEmptyMessage(4);
                         }
-                    } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
-                        // 语法理解去识别是否有数字号码
+
+                    } else {// 离线命令词
+                        text = JsonParser.parseGrammarResult(result.getResultString(), mEngineType);
+                        if (text.contains("打电话") && VoiceCellApplication.mSc > 55) {
+                            mEdtTransformResult.setText(text);
+                            String contactName = text.substring(text.indexOf("【") + 1, text.indexOf("】"));
+                            for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
+                                if (text.contains(VoiceCellApplication.mContacts.get(i).getName())) {
+                                    if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
+                                        Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
+                                        MainActivity.this.startActivity(intent);
+                                        mCallname = VoiceCellApplication.mContacts.get(i).getName();
+                                        mHandler.sendEmptyMessageDelayed(44444, 1500);
+                                        break;
+                                    } else {
+                                        Log.i("CollinWang", "要拨打联系人没有对应号码噢");
+                                        showTip("要拨打联系人没有对应号码噢");
+                                        wakeUpStart();
+                                        mEdtTransformResult.setText("Speak Result");
+                                    }
+                                }
+                            }
+                        } else if (text.contains("打电话") && VoiceCellApplication.mSc <= 55) {
+                            // 语法理解去识别是否有数字号码
                         /*setSpeechUnderstanderParam();
                         if (mSpeechUnderstander.isUnderstanding()) {
                             mSpeechUnderstander.stopUnderstanding();
@@ -535,47 +606,49 @@ public class MainActivity extends Activity implements OnClickListener {
                                 wakeUpStart();
                             }
                         }*/
-                        showTip("请清晰说话噢");
-                        wakeUpStart();
-                    } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
-                        // 停蓝牙CollinWang1101
-                        if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
-                            mBluetoothHelper.stop();
+                            showTip("请清晰说话噢");
+                            wakeUpStart();
+                        } else if (text.contains("拍照") && VoiceCellApplication.mSc > 60) {
+                            // 停蓝牙CollinWang1101
+                            if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                                mBluetoothHelper.stop();
+                            }
+                            mWakeUpRecognizer.stop();
+                            // 语音提示唤醒成功CollinWang1101
+                            mIndex = 2;
+                            setSpeechSynthesizerParam();
+                            int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
+                            if (code != ErrorCode.SUCCESS) {
+                                showTip("语音合成失败,错误码: " + code);
+                            } else {
+                                DebugLog.i("CollinWang", "code=" + code);
+                            }
+                            mEdtTransformResult.setText(text);
+                            Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
+                            MainActivity.this.startActivity(intent);
+                        } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
+                            DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
+                            wakeUpStart();
+                        } else if (text.contains("录音") && VoiceCellApplication.mSc > 60) {
+                            mAsr.stopListening();
+                            // 停蓝牙CollinWang1101
+                            if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                                mBluetoothHelper.stop();
+                            }
+                            mWakeUpRecognizer.stop();
+                            // 语音提示唤醒成功CollinWang1101
+                            mIndex = 3;
+                            setSpeechSynthesizerParam();
+                            int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
+                            if (code != ErrorCode.SUCCESS) {
+                                showTip("语音合成失败,错误码: " + code);
+                            } else {
+                                DebugLog.i("CollinWang", "code=" + code);
+                            }
+                            mHandler.sendEmptyMessage(4);
                         }
-                        mWakeUpRecognizer.stop();
-                        // 语音提示唤醒成功CollinWang1101
-                        mIndex = 2;
-                        setSpeechSynthesizerParam();
-                        int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
-                        if (code != ErrorCode.SUCCESS) {
-                            showTip("语音合成失败,错误码: " + code);
-                        } else {
-                            DebugLog.i("CollinWang", "code=" + code);
-                        }
-                        mEdtTransformResult.setText(text);
-                        Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
-                        MainActivity.this.startActivity(intent);
-                    } else if (text.contains("拍照") && VoiceCellApplication.mSc <= 60) {
-                        DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
-                        wakeUpStart();
-                    } else if (text.contains("录音") && VoiceCellApplication.mSc > 60) {
-                        mAsr.stopListening();
-                        // 停蓝牙CollinWang1101
-                        if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
-                            mBluetoothHelper.stop();
-                        }
-                        mWakeUpRecognizer.stop();
-                        // 语音提示唤醒成功CollinWang1101
-                        mIndex = 3;
-                        setSpeechSynthesizerParam();
-                        int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
-                        if (code != ErrorCode.SUCCESS) {
-                            showTip("语音合成失败,错误码: " + code);
-                        } else {
-                            DebugLog.i("CollinWang", "code=" + code);
-                        }
-                        mHandler.sendEmptyMessage(4);
                     }
+                    Log.i("CollinWang", "text=" + text);
                 }
             } else {
                 DebugLog.d(DebugLog.TAG, "Recognizer Result=null");
@@ -848,6 +921,7 @@ public class MainActivity extends Activity implements OnClickListener {
     protected void wakeUpStart() {
         if (mWakeUpRecognizer.isRunning())
             return;
+        initWakeUp();
         mWakeUpRecognizer.start();
     }
 

@@ -59,12 +59,10 @@ public class PhoneReceiver extends BroadcastReceiver {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 4444:
-
                     // 断开 SCO 连接
-                    if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
-                        mBlueHelper.stop();
-
-                    setParam();// 设置参数
+//                    if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
+//                        mBlueHelper.stop();
+//                    setParam();// 设置参数
                     int code = mTts.startSpeaking(tip, mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
                         showTip("语音合成失败,错误码: " + code);
@@ -216,8 +214,8 @@ public class PhoneReceiver extends BroadcastReceiver {
                 showTip("播放完成");
 
                 // 重新连接 sco
-                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
-                    mBlueHelper.start();
+//                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
+//                    mBlueHelper.start();
 
             } else if (error != null) {
                 showTip(error.getPlainDescription(true));
