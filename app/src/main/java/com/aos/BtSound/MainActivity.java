@@ -171,6 +171,10 @@ public class MainActivity extends Activity implements OnClickListener {
                 case 8888:
                     showTip(getString(R.string.text_begin));
                     break;
+                case 66666:
+                    mEdtTransformResult.setText("Speak Result");
+                    wakeUpStart();
+                    break;
                 case 44444:
                     // 停蓝牙CollinWang1101
 //                    if(mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
@@ -330,7 +334,7 @@ public class MainActivity extends Activity implements OnClickListener {
             mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
             mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
             // 前后端点CollinWang1029
-            mAsr.setParameter(SpeechConstant.VAD_BOS, "4000");//default5000
+            mAsr.setParameter(SpeechConstant.VAD_BOS, "2000");//default5000
             mAsr.setParameter(SpeechConstant.VAD_EOS, "1000");//default1800
             result = true;
         }
@@ -503,10 +507,13 @@ public class MainActivity extends Activity implements OnClickListener {
                     Log.i("CollinWang", "ishaveCall=" + JsonParser.isHaveCallOrText(result.getResultString()));
                     if (JsonParser.isHaveCallOrText(result.getResultString())) {
                         text = JsonParser.parseMixNameResultText(result.getResultString());
-                        // 直接打电话出去
-                        mEdtTransformResult.setText(text);
                         if (text.contains("打电话")) {
-                            if (FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
+                            if (FucUtil.getNumber(text).length() > 0 && !FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
+                                mEdtTransformResult.setText(text);
+                                showTip("手机号码格式有误，请重新说出");
+                                mHandler.sendEmptyMessageDelayed(66666, 1000);
+                            } else if (FucUtil.getNumber(text).length() > 0 && FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
+                                mEdtTransformResult.setText(text);
                                 contact = FucUtil.getNumber(text);// 此时是数字号码
                                 Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
                                 MainActivity.this.startActivity(intent);
@@ -514,6 +521,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                 mHandler.sendEmptyMessageDelayed(44444, 1500);
                             } else {
                                 contact = JsonParser.parseMixNameResult(result.getResultString());
+                                mEdtTransformResult.setText(text.replaceAll("，", "").substring(0, text.lastIndexOf("给")) + "给【" + contact + "】");
                                 for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                                     if (contact.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                                         if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
