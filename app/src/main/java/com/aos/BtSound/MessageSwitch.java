@@ -1,13 +1,28 @@
 package com.aos.BtSound;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.aos.BtSound.model.RecordFileInfo;
 import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.preference.Settings;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by collin on 2015-10-11.
@@ -15,6 +30,8 @@ import com.aos.BtSound.preference.Settings;
 public class MessageSwitch extends Activity implements View.OnClickListener {
     private Button mBtnClosed = null;
     private Button mBtnOpen = null;
+    private ListView mLvRecord = null;
+    private List<RecordFileInfo> mRecords = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +45,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     private void initView() {
         mBtnClosed = (Button) findViewById(R.id.btn_closed);
         mBtnOpen = (Button) findViewById(R.id.btn_open);
+        mLvRecord = (ListView) findViewById(R.id.lv_record_file);
     }
 
     private void initData() {
@@ -46,6 +64,19 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
             mBtnClosed.setBackgroundColor(this.getResources().getColor(R.color.gray_text));
             mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
         }
+
+        mRecords = new ArrayList<RecordFileInfo>();
+        String imagePath = Environment.getExternalStorageDirectory().toString() + "/audio";
+        File mfile = new File(imagePath);
+        File[] files = mfile.listFiles();
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (file.getPath().endsWith(".mp3")) {
+                mRecords.add(new RecordFileInfo(file.getName(), file.getPath()));
+            }
+        }
+
+        mLvRecord.setAdapter(new RecordAdapter(this, mRecords));
 
     }
 
@@ -78,5 +109,67 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                 Toast.makeText(this, "已打开", Toast.LENGTH_LONG).show();
                 break;
         }
+    }
+
+
+    public class RecordAdapter extends BaseAdapter {
+        private Context mContext = null;
+        private LayoutInflater mInflater = null;
+        private List<RecordFileInfo> mRecords = null;
+
+        private int mPosition = 0;
+        private boolean isHaveSubmit = false;
+
+        public RecordAdapter(Activity context, List<RecordFileInfo> records) {
+            this.mContext = context;
+            this.mRecords = records;
+            mInflater = LayoutInflater.from(mContext);
+        }
+
+        @Override
+        public int getCount() {
+            return mRecords == null ? 0 : mRecords.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return mRecords.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @SuppressLint("InflateParams")
+        @Override
+        public View getView(final int position, View convertView, ViewGroup parent) {
+            ViewHolder holder = null;
+            if (convertView == null) {
+                convertView = mInflater.inflate(R.layout.record_item_layout, null);
+                holder = new ViewHolder();
+                holder.mTvName = (TextView) convertView.findViewById(R.id.tv_record_name);
+                convertView.setTag(holder);
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            holder.mTvName.setText(mRecords.get(position).getFileName());
+
+            holder.mTvName.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent it = new Intent(Intent.ACTION_VIEW);
+                    it.setDataAndType(Uri.parse("file://" + mRecords.get(position).getFilePath()), "audio/MP3");
+                    startActivity(it);
+                }
+            });
+            return convertView;
+        }
+
+        private class ViewHolder {
+            private TextView mTvName = null;
+        }
+
     }
 }
