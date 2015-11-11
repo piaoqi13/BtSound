@@ -59,8 +59,8 @@ public class CameraSurfacePreview extends SurfaceView implements SurfaceHolder.C
         Log.d("Dennis", "surfaceDestroyed() is called");
     }
 
-    public boolean onTouchEvent(MotionEvent event) {//��Ļ�����¼�
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {//����ʱ�Զ��Խ�
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
             mCamera.autoFocus(null);
             // af = true;
         }

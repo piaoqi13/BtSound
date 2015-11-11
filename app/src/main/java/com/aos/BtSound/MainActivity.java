@@ -118,6 +118,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private int mIndex = -1;                                    // 0是提示唤醒已成功；1是提示正在打电话；2是提示正在拍照；3是提示正在录音
     private String mCallname = "";                              // 即将呼叫的联系人
 
+    private final String mSwitch = SpeechConstant.TYPE_MIX;   // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
+
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -321,7 +323,7 @@ public class MainActivity extends Activity implements OnClickListener {
             }
         } else {
             // 设置混合模式CollinWang1105
-            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_MIX);
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mSwitch);
             mAsr.setParameter("asr_sch", "1");
             mAsr.setParameter(SpeechConstant.NLP_VERSION, "2.0");
             mAsr.setParameter(SpeechConstant.RESULT_TYPE, "json");
@@ -533,9 +535,12 @@ public class MainActivity extends Activity implements OnClickListener {
                                         } else {
                                             Log.i("CollinWang", "要拨打联系人没有对应号码噢");
                                             showTip("要拨打联系人没有对应号码噢");
-                                            wakeUpStart();
-                                            mEdtTransformResult.setText("Speak Result");
+                                            mHandler.sendEmptyMessageDelayed(66666, 1000);
                                         }
+                                    } else {
+                                        Log.i("CollinWang", "没有找到此联系人噢");
+                                        showTip("没有找到此联系人噢");
+                                        mHandler.sendEmptyMessageDelayed(66666, 1000);
                                     }
                                 }
                             }
@@ -694,7 +699,11 @@ public class MainActivity extends Activity implements OnClickListener {
             } else {
                 wakeUpStart();
             }*/
-            showTip("错误码=" + error.getErrorCode());
+            if (error.getErrorCode() == 20001) {
+                showTip("当前是试用版不支持离线命令噢");
+            } else {
+                showTip("错误码=" + error.getErrorCode());
+            }
             wakeUpStart();
         }
 

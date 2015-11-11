@@ -59,7 +59,7 @@ public class MyMediaRecorder {
 
         if(audPath.mkdirs() || audPath.isDirectory()) {
             String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            return audPath + File.separator + "AUD_" + timeStamp + ".3gp";
+            return audPath + File.separator + "AUD_" + timeStamp + ".mp3";
         } else {
             throw new IllegalArgumentException("sd card does not exist or lack of memory");
         }

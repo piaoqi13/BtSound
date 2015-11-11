@@ -2,7 +2,7 @@
 <resources>
 
     <!--<string name="app_name">傲石语音</string>-->
-    <string name="app_name">傲石语音</string>
+    <string name="app_name">傲石语音试用版</string>
     <string name="take_call">打电话</string>
     <string name="send_messages">发短信</string>
     <string name="take_photo">拍照</string>
@@ -76,6 +76,8 @@
 4、有来电时，蓝牙眼镜（耳机）会提示”请注意XXX正在呼叫您“；\n
         \n
 5、点击软件设置可设置短信播报：设置开启则语音播报短信，设置关闭则不读播报；\n
+        \n
+        6、傲石语音支持在线和离线语音识别，离线功能仅对傲石客户开放；当前是试用版本，离线功能暂不可用。\n
         \n
 欢迎加入傲石语音QQ群：125821920</string>
 </resources>
