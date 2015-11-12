@@ -523,7 +523,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                 mHandler.sendEmptyMessageDelayed(44444, 1500);
                             } else {
                                 contact = JsonParser.parseMixNameResult(result.getResultString());
-                                mEdtTransformResult.setText(text.replaceAll("，", "").substring(0, text.lastIndexOf("给")) + "给【" + contact + "】");
+                                mEdtTransformResult.setText(text.replaceAll("，", "").replaceAll("给", "").substring(0, text.lastIndexOf("电话")) + "给【" + contact + "】");
                                 for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                                     if (contact.contains(VoiceCellApplication.mContacts.get(i).getName())) {
                                         if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
@@ -553,12 +553,12 @@ public class MainActivity extends Activity implements OnClickListener {
                             // 语音提示唤醒成功CollinWang1101
                             mIndex = 2;
                             setSpeechSynthesizerParam();
-                            int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
-                            if (code != ErrorCode.SUCCESS) {
-                                showTip("语音合成失败,错误码: " + code);
-                            } else {
-                                DebugLog.i("CollinWang", "code=" + code);
-                            }
+//                            int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
+//                            if (code != ErrorCode.SUCCESS) {
+//                                showTip("语音合成失败,错误码: " + code);
+//                            } else {
+//                                DebugLog.i("CollinWang", "code=" + code);
+//                            }
                             mEdtTransformResult.setText(text);
                             Intent intent = new Intent(MainActivity.this, AndroidCameraActivity.class);
                             MainActivity.this.startActivity(intent);

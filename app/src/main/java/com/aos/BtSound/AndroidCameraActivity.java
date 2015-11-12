@@ -5,6 +5,8 @@ package com.aos.BtSound;
  */
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -21,6 +23,17 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.aos.BtSound.log.DebugLog;
+import com.aos.BtSound.receiver.PhoneReceiver;
+import com.aos.BtSound.setting.TtsSettings;
+import com.iflytek.cloud.ErrorCode;
+import com.iflytek.cloud.InitListener;
+import com.iflytek.cloud.SpeechConstant;
+import com.iflytek.cloud.SpeechError;
+import com.iflytek.cloud.SpeechSynthesizer;
+import com.iflytek.cloud.SynthesizerListener;
+import com.iflytek.cloud.util.ResourceUtil;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -29,15 +42,36 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class AndroidCameraActivity extends Activity implements OnClickListener, PictureCallback {
+    private Context mContext = null;
     private CameraSurfacePreview mCameraSurPreview = null;
     private Button mCaptureButton = null;
     private String TAG = "Dennis";
     FileOutputStream fos = null;
 
+
+    // 语音合成对象
+    private SpeechSynthesizer mTts = null;
+    // 存储对象
+    private SharedPreferences mSharedPreferences = null;
+    // 默认云端发音人
+    public static String voicerCloud = "xiaoyan";
+    // 默认本地发音人
+    public static String voicerLocal = "xiaoyan";
+    // 引擎类型
+    private String mEngineType = SpeechConstant.TYPE_LOCAL;
+    // 缓冲进度
+    private int mPercentForBuffering = 0;
+    // 播放进度
+    private int mPercentForPlaying = 0;
+    // 吐司提示
+    private Toast mToast = null;
+    private String tip = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.mian);
+        mContext = this;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         // Create our Preview view and set it as the content of our activity.
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
@@ -46,17 +80,28 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         // Add a listener to the Capture button
         mCaptureButton = (Button) findViewById(R.id.button_capture);
         mCaptureButton.setOnClickListener(this);
+
+        // 初始化合成对象
+        mTts = SpeechSynthesizer.createSynthesizer(mContext, mTtsInitListener);
+        mToast = Toast.makeText(mContext, "", Toast.LENGTH_SHORT);
+        mSharedPreferences = mContext.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        int code = mTts.startSpeaking("准备拍照，1，2，3", mTtsListener);
+        if (code != ErrorCode.SUCCESS) {
+            showTip("语音合成失败,错误码: " + code);
+        } else {
+            DebugLog.i("CollinWang", "code=" + code);
+        }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 mCameraSurPreview.takePicture(AndroidCameraActivity.this);
             }
-        }, 2000);
+        }, 3000);
     }
 
     @Override
@@ -145,4 +190,95 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         return new File(picPath + File.separator + "IMG_" + timeStamp + ".jpg");
 
     }
+
+
+    // 初始化监听
+    private InitListener mTtsInitListener = new InitListener() {
+        @Override
+        public void onInit(int code) {
+            DebugLog.d("CollinWang", "InitListener init() code = " + code);
+            if (code != ErrorCode.SUCCESS) {
+                showTip("初始化失败,错误码：" + code);
+            }
+        }
+    };
+
+    private void showTip(final String str) {
+        mToast.setText(str);
+        mToast.show();
+    }
+
+    // 设置属性
+    private void setParam() {
+        mTts.setParameter(SpeechConstant.PARAMS, null);
+        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+            mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
+        } else {
+            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+            mTts.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath());
+            mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);
+        }
+        mTts.setParameter(SpeechConstant.SPEED, mSharedPreferences.getString("speed_preference", "50"));
+        mTts.setParameter(SpeechConstant.PITCH, mSharedPreferences.getString("pitch_preference", "50"));
+        mTts.setParameter(SpeechConstant.VOLUME, mSharedPreferences.getString("volume_preference", "50"));
+        mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
+    }
+
+    // 获取发音人资源路径
+    private String getResourcePath() {
+        StringBuffer tempBuffer = new StringBuffer();
+        tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
+        tempBuffer.append(";");
+        tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/" + PhoneReceiver.voicerLocal + ".jet"));
+        return tempBuffer.toString();
+    }
+
+    // 合成回调监听
+    private SynthesizerListener mTtsListener = new SynthesizerListener() {
+        @Override
+        public void onSpeakBegin() {
+            showTip("开始播放");
+        }
+
+        @Override
+        public void onSpeakPaused() {
+            showTip("暂停播放");
+        }
+
+        @Override
+        public void onSpeakResumed() {
+            showTip("继续播放");
+        }
+
+        @Override
+        public void onBufferProgress(int percent, int beginPos, int endPos, String info) {
+            mPercentForBuffering = percent;
+        }
+
+        @Override
+        public void onSpeakProgress(int percent, int beginPos, int endPos) {
+            mPercentForPlaying = percent;
+            showTip(String.format(mContext.getString(R.string.tts_toast_format), mPercentForBuffering, mPercentForPlaying));
+        }
+
+        @Override
+        public void onCompleted(SpeechError error) {
+            if (error == null) {
+                showTip("播放完成");
+
+                // 重新连接 sco
+                //                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
+                //                    mBlueHelper.start();
+
+            } else if (error != null) {
+                showTip(error.getPlainDescription(true));
+            }
+        }
+
+        @Override
+        public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) {
+            // ToDo
+        }
+    };
 }
