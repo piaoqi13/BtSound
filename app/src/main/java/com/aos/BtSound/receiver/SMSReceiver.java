@@ -43,24 +43,17 @@ public class SMSReceiver extends ContentObserver {
 	private List<SmsInfo> mSmsInfos = null;
 
 	private Context mContext = null;
-	// 语音合成对象
 	private SpeechSynthesizer mTts = null;
-	// 存储对象
 	private SharedPreferences mSharedPreferences = null;
-	// 默认云端发音人
 	public static String voicerCloud = "xiaoyan";
-	// 默认本地发音人
 	public static String voicerLocal = "xiaoyan";
-	// 引擎类型
-	private String mEngineType = SpeechConstant.TYPE_CLOUD;
-	// 缓冲进度
 	private int mPercentForBuffering = 0;
-	// 播放进度
 	private int mPercentForPlaying = 0;
-	// 吐司提示
 	private Toast mToast = null;
 
-    // 蓝牙检测
+	private String mEngineType = SpeechConstant.TYPE_CLOUD;
+
+    /** 蓝牙检测 */
     private BluetoothHeadsetUtils mBlueHelper;
 
 	public SMSReceiver(Handler handler, Context context, BluetoothHeadsetUtils bluetoothHelper) {
@@ -68,7 +61,7 @@ public class SMSReceiver extends ContentObserver {
 		this.mActivity = (Activity)context;
 		this.mHandler = handler;
         mBlueHelper = bluetoothHelper;
-		// 初始化合成对象
+
 		mTts = SpeechSynthesizer.createSynthesizer(context, mTtsInitListener);
 		mToast = Toast.makeText(context, "", Toast.LENGTH_SHORT);
 		mSharedPreferences = context.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
@@ -84,12 +77,9 @@ public class SMSReceiver extends ContentObserver {
 				for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
 					if (mSmsInfos.get(0).getPhoneNumber().replace("+86", "").equals(VoiceCellApplication.mContacts.get(i).getPhoneNumber().replace(" ", ""))) {
 						setParam();
-
-                        // 断开蓝牙 SCO 连接
+                        // 断开蓝牙SCO连接
                         if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
                             mBlueHelper.stop();
-                        // 断开蓝牙 SCO 连接
-
 						int code = mTts.startSpeaking("有短信息进来，内容是" + mSmsInfos.get(0).getSmsbody(), mTtsListener);
 						if (code != ErrorCode.SUCCESS) {
 							showTip("语音合成未成功，错误码: " + code);
@@ -107,7 +97,6 @@ public class SMSReceiver extends ContentObserver {
 		super.onChange(selfChange);
 	}
 
-	// 初始化监听
 	private InitListener mTtsInitListener = new InitListener() {
 		@Override
 		public void onInit(int code) {
@@ -123,7 +112,6 @@ public class SMSReceiver extends ContentObserver {
 		mToast.show();
 	}
 
-	// 设置属性
 	private void setParam() {
 		mTts.setParameter(SpeechConstant.PARAMS, null);
 		if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
@@ -140,7 +128,6 @@ public class SMSReceiver extends ContentObserver {
 		mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
 	}
 
-	// 获取发音人资源路径
 	private String getResourcePath() {
 		StringBuffer tempBuffer = new StringBuffer();
 		tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
@@ -149,7 +136,6 @@ public class SMSReceiver extends ContentObserver {
 		return tempBuffer.toString();
 	}
 
-	// 合成回调监听
 	private SynthesizerListener mTtsListener = new SynthesizerListener() {
 		@Override
 		public void onSpeakBegin() {
@@ -181,12 +167,9 @@ public class SMSReceiver extends ContentObserver {
 		public void onCompleted(SpeechError error) {
 			if (error == null) {
 				showTip("播放完成");
-
-                // 播放完成后，连接上蓝牙 SCO
+                // 播放完成后，连接上蓝牙SCO
                 if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
                     mBlueHelper.start();
-                // 播放完成后，连接上蓝牙 SCO
-
 			} else if (error != null) {
 				showTip(error.getPlainDescription(true));
 			}
@@ -194,8 +177,6 @@ public class SMSReceiver extends ContentObserver {
 
 		@Override
 		public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) {
-			// ToDo
 		}
 	};
-
 }

@@ -14,11 +14,9 @@ import java.util.Date;
  * 初始化时获得 MediaRecorder 对象
  * 调用 startRecording() 表示开始录音
  * 调用 stopRecording() 表示结束录音
- *
  * 音频文件存储在 sd 卡的 audio 目录下
  */
 public class MyMediaRecorder {
-
     private MediaRecorder mMediaRecorder;
 
     public MyMediaRecorder() {
@@ -44,7 +42,7 @@ public class MyMediaRecorder {
 
     // 结束录音；
     public void stopRecording() {
-        if(mMediaRecorder != null) {
+        if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.release();
             mMediaRecorder = null;
@@ -53,11 +51,9 @@ public class MyMediaRecorder {
 
     // 音频输出文件保存地址；
     private String getOutputFile() {
-
         String sdCard = Environment.getExternalStorageDirectory().getAbsolutePath();
         File audPath = new File(sdCard + File.separator + "audio");
-
-        if(audPath.mkdirs() || audPath.isDirectory()) {
+        if (audPath.mkdirs() || audPath.isDirectory()) {
             String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             return audPath + File.separator + "语音记事_" + timeStamp + ".mp3";
         } else {

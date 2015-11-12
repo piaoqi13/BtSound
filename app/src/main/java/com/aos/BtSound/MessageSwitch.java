@@ -31,7 +31,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     private Button mBtnClosed = null;
     private Button mBtnOpen = null;
     private ListView mLvRecord = null;
-    private List<RecordFileInfo> mRecords = null;
+    private List<RecordFileInfo> mRecords = null;//语音记事集合
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,9 +75,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                 mRecords.add(new RecordFileInfo(file.getName(), file.getPath()));
             }
         }
-
         mLvRecord.setAdapter(new RecordAdapter(this, mRecords));
-
     }
 
     private void initListener() {

@@ -31,30 +31,6 @@ public class JsonParser {
         return ret.toString();
     }
 
-    public static String parseSpeechUnderstanderResult(String json) {
-        String text = "";
-        try {
-            JSONTokener tokener = new JSONTokener(json);
-            JSONObject joResult = new JSONObject(tokener);
-            text = joResult.getString("text");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return text;
-    }
-
-    public static String parseSpeechUnderstanderNameResult(String json) {
-        String text = "";
-        try {
-            JSONTokener tokener = new JSONTokener(json);
-            JSONObject joResult = new JSONObject(tokener);
-            text = joResult.getString("text");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return text;
-    }
-
     // 混合模式下语法识别返回语法理解CollinWang
     public static String parseMixNameResult(String json) {
         String contact = "";

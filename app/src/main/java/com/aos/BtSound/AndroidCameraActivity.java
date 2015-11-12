@@ -46,24 +46,15 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
     private CameraSurfacePreview mCameraSurPreview = null;
     private Button mCaptureButton = null;
     private String TAG = "Dennis";
-    FileOutputStream fos = null;
+    private FileOutputStream fos = null;
 
-
-    // 语音合成对象
     private SpeechSynthesizer mTts = null;
-    // 存储对象
     private SharedPreferences mSharedPreferences = null;
-    // 默认云端发音人
     public static String voicerCloud = "xiaoyan";
-    // 默认本地发音人
     public static String voicerLocal = "xiaoyan";
-    // 引擎类型
     private String mEngineType = SpeechConstant.TYPE_LOCAL;
-    // 缓冲进度
     private int mPercentForBuffering = 0;
-    // 播放进度
     private int mPercentForPlaying = 0;
-    // 吐司提示
     private Toast mToast = null;
     private String tip = "";
 
@@ -81,7 +72,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         mCaptureButton = (Button) findViewById(R.id.button_capture);
         mCaptureButton.setOnClickListener(this);
 
-        // 初始化合成对象
         mTts = SpeechSynthesizer.createSynthesizer(mContext, mTtsInitListener);
         mToast = Toast.makeText(mContext, "", Toast.LENGTH_SHORT);
         mSharedPreferences = mContext.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
@@ -115,23 +105,16 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
         String resultMessage = null;
         try {
-
             Bitmap bm0 = BitmapFactory.decodeByteArray(data, 0, data.length);
-
             // 旋转图片
             Bitmap bm = convertBmp(bm0);
-
             // 保存到本地
             fos = new FileOutputStream(pictureFile);
             bm.compress(Bitmap.CompressFormat.JPEG, 100, fos);
             fos.flush();
-
             // 手动刷新系统相册
-            MediaScannerConnection.scanFile(this,
-                    new String[]{pictureFile.toString()}, null, null);
-
+            MediaScannerConnection.scanFile(this, new String[]{pictureFile.toString()}, null, null);
             resultMessage = "照片保存在 " + pictureFile;
-
         } catch (FileNotFoundException e) {
             Log.d(TAG, "File not found: " + e.getMessage());
             resultMessage = e.getMessage();
@@ -152,11 +135,10 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         Toast.makeText(AndroidCameraActivity.this, resultMessage, Toast.LENGTH_SHORT).show();
         finish();
         // Restart the preview and re-enable the shutter button so that we can take another picture
-//        camera.startPreview();
+        //        camera.startPreview();
     }
 
     private Bitmap convertBmp(Bitmap bmp) {
-
         Matrix m = new Matrix();
         m.setRotate(-90, (float) bmp.getWidth() / 2, (float) bmp.getHeight() / 2);
         Bitmap bm = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), m, true);
@@ -165,7 +147,7 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         int h = bm.getHeight();
 
         Matrix matrix = new Matrix();
-        matrix.postScale(-1, 1);       // 镜像水平翻转
+        matrix.postScale(-1, 1);// 镜像水平翻转
         Bitmap convertBmp = Bitmap.createBitmap(bm, 0, 0, w, h, matrix, true);
         return convertBmp;
     }
@@ -176,23 +158,18 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         mCameraSurPreview.takePicture(this);
     }
 
-    /**
-     *
-     * @return
-     */
     private File getOutputMediaFile() {
         // get the mobile Pictures directory
         String picPath = "/sdcard/DCIM/Camera/";
         File picDir = new File(picPath);
-        if(!picDir.exists()) return null;
+        if (!picDir.exists())
+            return null;
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         return new File(picPath + File.separator + "IMG_" + timeStamp + ".jpg");
 
     }
 
-
-    // 初始化监听
     private InitListener mTtsInitListener = new InitListener() {
         @Override
         public void onInit(int code) {
@@ -208,7 +185,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         mToast.show();
     }
 
-    // 设置属性
     private void setParam() {
         mTts.setParameter(SpeechConstant.PARAMS, null);
         if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
@@ -225,7 +201,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
     }
 
-    // 获取发音人资源路径
     private String getResourcePath() {
         StringBuffer tempBuffer = new StringBuffer();
         tempBuffer.append(ResourceUtil.generateResourcePath(mContext, ResourceUtil.RESOURCE_TYPE.assets, "tts/common.jet"));
@@ -234,7 +209,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         return tempBuffer.toString();
     }
 
-    // 合成回调监听
     private SynthesizerListener mTtsListener = new SynthesizerListener() {
         @Override
         public void onSpeakBegin() {
@@ -266,11 +240,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         public void onCompleted(SpeechError error) {
             if (error == null) {
                 showTip("播放完成");
-
-                // 重新连接 sco
-                //                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
-                //                    mBlueHelper.start();
-
             } else if (error != null) {
                 showTip(error.getPlainDescription(true));
             }
@@ -278,7 +247,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
         @Override
         public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) {
-            // ToDo
         }
     };
 }
