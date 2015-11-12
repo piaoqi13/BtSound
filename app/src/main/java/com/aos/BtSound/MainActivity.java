@@ -503,10 +503,11 @@ public class MainActivity extends Activity implements OnClickListener {
                                             mHandler.sendEmptyMessageDelayed(66666, 1000);
                                         }
                                     } else {
-                                        Log.i("CollinWang", "没有找到此联系人噢");
-                                        showTip("没有找到此联系人噢");
-                                        mHandler.sendEmptyMessageDelayed(66666, 1000);
-                                        continue;// 这块要继续循环
+                                        if (i == VoiceCellApplication.mContacts.size() - 1) {
+                                            Log.i("CollinWang", "没有找到此联系人噢");
+                                            showTip("没有找到此联系人噢");
+                                            mHandler.sendEmptyMessageDelayed(66666, 1000);
+                                        }
                                     }
                                 }
                             }
