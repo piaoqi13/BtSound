@@ -111,7 +111,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private int mIndex = -1;                                    // 0是提示唤醒已成功；1是提示正在打电话；2是提示正在拍照；3是提示正在录音
     private String mCallname = "";                              // 即将呼叫的联系人
 
-    private final String mSwitch = SpeechConstant.TYPE_MIX;     // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
+    private final String mSwitch = SpeechConstant.TYPE_CLOUD;     // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -198,9 +198,8 @@ public class MainActivity extends Activity implements OnClickListener {
         ObtainContactsUtil.getInstance(mContext).getPhoneContacts();
         // 友盟自动更新
         UmengUpdateAgent.update(this);
-
-        mAsr = SpeechRecognizer.createRecognizer(this, mInitListener);
         // 初始化语法、命令词
+        mAsr = SpeechRecognizer.createRecognizer(this, mInitListener);
         mLocalLexicon = "王超\n刘雄斌\n蔡哥\n";
         mLocalGrammar = FucUtil.readFile(this, "call.bnf", "utf-8");
         mCloudGrammar = FucUtil.readFile(this, "grammar_sample.abnf", "utf-8");
@@ -209,9 +208,13 @@ public class MainActivity extends Activity implements OnClickListener {
         mgr.asyncQueryAllContactsName();
         mSharedPreferences = getSharedPreferences(getPackageName(), MODE_PRIVATE);
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
-        // 默认本地引擎构造语法更新词典
-        buildGrammar();
-        mHandler.sendEmptyMessageDelayed(4444, 1000);
+        if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {
+            // 默认本地引擎构造语法更新词典
+            buildGrammar();
+            mHandler.sendEmptyMessageDelayed(4444, 1000);
+        } else {
+            Log.i("CollinWang","不是本地引擎");
+        }
         // 短信播报广播注册
         mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
@@ -488,7 +491,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                 mHandler.sendEmptyMessageDelayed(44444, 1500);
                             } else {
                                 contact = JsonParser.parseMixNameResult(result.getResultString());
-                                mEdtTransformResult.setText(text.replaceAll("，", "").substring(0, text.lastIndexOf("给")) + "给【" + contact + "】");
+                                mEdtTransformResult.setText(text.replaceAll("，", "").replaceAll("给", "").substring(0, text.lastIndexOf("话")) + "话给【" + contact + "】");
                                 for (int i = 0; i < VoiceCellApplication.mContacts.size(); i++) {
                                     if (contact.equals(VoiceCellApplication.mContacts.get(i).getName())) {
                                         if (!VoiceCellApplication.mContacts.get(i).getPhoneNumber().equals("")) {
@@ -636,7 +639,7 @@ public class MainActivity extends Activity implements OnClickListener {
             } else {
                 showTip("错误码=" + error.getErrorCode());
             }
-            wakeUpStart();
+            mHandler.sendEmptyMessageDelayed(66666, 1000);
         }
 
         @Override
