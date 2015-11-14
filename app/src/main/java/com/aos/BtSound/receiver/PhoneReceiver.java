@@ -37,34 +37,20 @@ import com.iflytek.cloud.util.ResourceUtil.RESOURCE_TYPE;
  */
 public class PhoneReceiver extends BroadcastReceiver {
     private Context mContext = null;
-    // 语音合成对象
     private SpeechSynthesizer mTts = null;
-    // 存储对象
     private SharedPreferences mSharedPreferences = null;
-    // 默认云端发音人
     public static String voicerCloud = "xiaoyan";
-    // 默认本地发音人
     public static String voicerLocal = "xiaoyan";
-    // 引擎类型
-    private String mEngineType = SpeechConstant.TYPE_LOCAL;
-    // 缓冲进度
     private int mPercentForBuffering = 0;
-    // 播放进度
     private int mPercentForPlaying = 0;
-    // 吐司提示
     private Toast mToast = null;
     private String tip = "";
 
-    private Handler mHandler = new Handler(){
+    private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case 4444:
-
-                    // 断开 SCO 连接
-                    if(mBlueHelper != null && mBlueHelper.isOnHeadsetSco())
-                        mBlueHelper.stop();
-
-                    setParam();// 设置参数
+                    setParam();
                     int code = mTts.startSpeaking(tip, mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
                         showTip("语音合成失败,错误码: " + code);
@@ -77,6 +63,7 @@ public class PhoneReceiver extends BroadcastReceiver {
     };
 
     private BluetoothHeadsetUtils mBlueHelper;
+
     public PhoneReceiver(BluetoothHeadsetUtils bleHelper) {
         mBlueHelper = bleHelper;
     }
@@ -105,14 +92,9 @@ public class PhoneReceiver extends BroadcastReceiver {
             AudioManager audio = (AudioManager) mContext.getSystemService(Service.AUDIO_SERVICE);
             switch (state) {
                 case TelephonyManager.CALL_STATE_IDLE:
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-
-                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "挂断");
                     break;
                 case TelephonyManager.CALL_STATE_OFFHOOK:
-                    //audio.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-                    //audio.setStreamVolume(AudioManager.STREAM_RING, audio.getStreamVolume(2), AudioManager.FLAG_PLAY_SOUND);
                     DebugLog.i("CollinWang", "接听");
                     break;
                 case TelephonyManager.CALL_STATE_RINGING:
@@ -140,7 +122,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         }
     };
 
-    // 初始化监听
     private InitListener mTtsInitListener = new InitListener() {
         @Override
         public void onInit(int code) {
@@ -156,10 +137,9 @@ public class PhoneReceiver extends BroadcastReceiver {
         mToast.show();
     }
 
-    // 设置属性
     private void setParam() {
         mTts.setParameter(SpeechConstant.PARAMS, null);
-        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+        if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
         } else {
@@ -173,7 +153,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
     }
 
-    // 获取发音人资源路径
     private String getResourcePath() {
         StringBuffer tempBuffer = new StringBuffer();
         tempBuffer.append(ResourceUtil.generateResourcePath(mContext, RESOURCE_TYPE.assets, "tts/common.jet"));
@@ -182,7 +161,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         return tempBuffer.toString();
     }
 
-    // 合成回调监听
     private SynthesizerListener mTtsListener = new SynthesizerListener() {
         @Override
         public void onSpeakBegin() {
@@ -214,11 +192,6 @@ public class PhoneReceiver extends BroadcastReceiver {
         public void onCompleted(SpeechError error) {
             if (error == null) {
                 showTip("播放完成");
-
-                // 重新连接 sco
-                if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
-                    mBlueHelper.start();
-
             } else if (error != null) {
                 showTip(error.getPlainDescription(true));
             }
@@ -226,7 +199,6 @@ public class PhoneReceiver extends BroadcastReceiver {
 
         @Override
         public void onEvent(int arg0, int arg1, int arg2, Bundle arg3) {
-            // ToDo
         }
     };
 
