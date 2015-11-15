@@ -7,8 +7,8 @@ package com.aos.BtSound.model;
  * 作者：王超
  */
 public class ContactInfo {
-    private String name = null;
-    private String phoneNumber = null;
+    private String name = "";
+    private String phoneNumber = "";
 
     public ContactInfo(String name, String phoneNumber) {
         super();

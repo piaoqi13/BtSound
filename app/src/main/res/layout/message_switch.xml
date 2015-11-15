@@ -48,10 +48,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
-        android:paddingLeft="5dp"
-        android:paddingRight="5dp"
-        android:text="短信播报说明：本开关仅用于打开或关闭短信语音播报。"
+        android:text="语音记事列表"
         android:textColor="#666666"
-        android:textSize="15sp"/>
+        android:textSize="20sp"/>
+
+    <ListView
+        android:id="@+id/lv_record_file"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
+    </ListView>
 
 </LinearLayout>

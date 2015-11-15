@@ -1,5 +1,7 @@
 package com.aos.BtSound.util;
 
+import android.util.Log;
+
 import com.aos.BtSound.VoiceCellApplication;
 
 import org.json.JSONArray;
@@ -29,7 +31,23 @@ public class JsonParser {
         return ret.toString();
     }
 
-    public static String parseSpeechUnderstanderResult(String json) {
+    // 混合模式下语法识别返回语法理解CollinWang
+    public static String parseMixNameResult(String json) {
+        String contact = "";
+        try {
+            JSONTokener tokener = new JSONTokener(json);
+            JSONObject joResult = new JSONObject(tokener);
+            contact = joResult.getJSONObject("semantic").getJSONObject("slots").getString("name");
+        } catch (Exception e) {
+            Log.i("CollinWang", "Catch=", e);
+        }
+
+        return contact;
+
+    }
+
+    // 混合模式下语法识别返回语法理解拿到textCollinWang
+    public static String parseMixNameResultText(String json) {
         String text = "";
         try {
             JSONTokener tokener = new JSONTokener(json);
@@ -39,6 +57,24 @@ public class JsonParser {
             e.printStackTrace();
         }
         return text;
+    }
+
+    public static boolean isHaveCallOrText(String json) {
+        String operation = "";
+        String text = "";
+        try {
+            JSONTokener tokener = new JSONTokener(json);
+            JSONObject joResult = new JSONObject(tokener);
+            operation = joResult.optString("operation");
+            text = joResult.optString("text");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (operation.equals("CALL") || text.contains("拍照") || text.contains("录音")) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public static String parseGrammarResult(String json, String engType) {
