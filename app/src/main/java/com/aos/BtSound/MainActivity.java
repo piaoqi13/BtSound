@@ -112,7 +112,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private int mIndex = -1;                                    // 0是提示唤醒已成功；1是提示正在打电话；2是提示正在拍照；3是提示正在录音
     private String mCallname = "";                              // 即将呼叫的联系人
 
-    private final String mSwitch = SpeechConstant.TYPE_MIX;     // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
+    private final String mSwitch = SpeechConstant.TYPE_CLOUD;   // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -286,6 +286,9 @@ public class MainActivity extends Activity implements OnClickListener {
         mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
         mAsr.setParameter(SpeechConstant.GRAMMAR_LIST, "call");
         mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+        // 讯飞君沟通处理楚曲圣误判1116
+        mAsr.setParameter(SpeechConstant.PARAMS, null);
+        String contents = FucUtil.readFile(mContext, "userwords", "utf-8");
         ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
         if (ret != ErrorCode.SUCCESS) {
             showTip("更新词典未成功");
@@ -858,20 +861,13 @@ public class MainActivity extends Activity implements OnClickListener {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-
-        DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown "
-                " event Info : " + event.toString() );
-
-        // 判断是否有 音乐在播放
+        DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown" + " event Info : " + event.toString());
         // 如果音乐没有正在播放
         if (!mAudioManager.isMusicActive()) {
-
             // 如果来自 蓝牙眼镜，并且是 MEDIA_PLAY 按钮
             if (event.getDeviceId() == BLUETOOTH_GLASS) {
                 if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY) {
-
                     DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown " + "");
-
                     try {
                         beginRecord();
                         mIsRecording = true;
@@ -880,27 +876,22 @@ public class MainActivity extends Activity implements OnClickListener {
                     } finally {
 
                     }
-
                     return true;
                 }
 
                 if (keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE) {
-
                     DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown " + "");
-
                     try {
                         stopRecord();
                     } catch (Exception e) {
-
+                        Log.i("CollinWang", "Catch=", e);
                     } finally {
                         mIsRecording = false;
                     }
-
                     return true;
                 }
             }
         }
-
         return super.onKeyDown(keyCode, event);
     }
 
@@ -908,7 +899,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     }
 
-    private void beginRecord() throws  Exception {
+    private void beginRecord() throws Exception {
 
     }
 }
