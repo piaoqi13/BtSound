@@ -111,7 +111,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private int mIndex = -1;                                    // 0是提示唤醒已成功；1是提示正在打电话；2是提示正在拍照；3是提示正在录音
     private String mCallname = "";                              // 即将呼叫的联系人
 
-    private final String mSwitch = SpeechConstant.TYPE_CLOUD;     // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
+    private final String mSwitch = SpeechConstant.TYPE_MIX;     // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -209,12 +209,15 @@ public class MainActivity extends Activity implements OnClickListener {
         mSharedPreferences = getSharedPreferences(getPackageName(), MODE_PRIVATE);
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
         if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {
-            // 默认本地引擎构造语法更新词典
-            buildGrammar();
-            mHandler.sendEmptyMessageDelayed(4444, 1000);
+
         } else {
             Log.i("CollinWang","不是本地引擎");
         }
+
+        // 默认本地引擎构造语法更新词典
+        buildGrammar();
+        mHandler.sendEmptyMessageDelayed(4444, 1000);
+
         // 短信播报广播注册
         mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
