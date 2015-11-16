@@ -7,6 +7,7 @@ import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.aos.BtSound.R;
@@ -171,7 +172,12 @@ public class SMSReceiver extends ContentObserver {
                 if(mBlueHelper != null && !mBlueHelper.isOnHeadsetSco())
                     mBlueHelper.start();
 			} else if (error != null) {
-				showTip(error.getPlainDescription(true));
+				if (error.getErrorCode() == 20001) {
+					showTip("当前是试用版不支持离线功能噢");
+				} else {
+					showTip("错误码=" + error.getErrorCode());
+				}
+				Log.i("CollinWang", "error=" + error.getPlainDescription(true));
 			}
 		}
 

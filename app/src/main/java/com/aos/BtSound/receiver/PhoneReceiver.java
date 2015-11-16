@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.aos.BtSound.R;
@@ -193,7 +194,12 @@ public class PhoneReceiver extends BroadcastReceiver {
             if (error == null) {
                 showTip("播放完成");
             } else if (error != null) {
-                showTip(error.getPlainDescription(true));
+                if (error.getErrorCode() == 20001) {
+                    showTip("当前是试用版不支持离线功能噢");
+                } else {
+                    showTip("错误码=" + error.getErrorCode());
+                }
+                Log.i("CollinWang", "error=" + error.getPlainDescription(true));
             }
         }
 

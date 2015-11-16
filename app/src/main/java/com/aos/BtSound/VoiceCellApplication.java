@@ -21,7 +21,7 @@ import java.util.List;
 public class VoiceCellApplication extends Application {
     public static Context mApplication = null;//应用程序本身
     public static List<ContactInfo> mContacts = new ArrayList<ContactInfo>();// 装载联系人信息
-    public static String mEngineType = SpeechConstant.TYPE_LOCAL;//引擎模式
+    public static String mEngineType = SpeechConstant.TYPE_CLOUD;//引擎模式
     public static int mSc = 0;//语法识别置信度分数
 
     @Override

@@ -210,15 +210,12 @@ public class MainActivity extends Activity implements OnClickListener {
         mSharedPreferences = getSharedPreferences(getPackageName(), MODE_PRIVATE);
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
         if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {
-
+            // 默认本地引擎构造语法更新词典
+            buildGrammar();
+            mHandler.sendEmptyMessageDelayed(4444, 1000);
         } else {
             Log.i("CollinWang","不是本地引擎");
         }
-
-        // 默认本地引擎构造语法更新词典
-        buildGrammar();
-        mHandler.sendEmptyMessageDelayed(4444, 1000);
-
         // 短信播报广播注册
         mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
@@ -287,7 +284,6 @@ public class MainActivity extends Activity implements OnClickListener {
         mAsr.setParameter(SpeechConstant.GRAMMAR_LIST, "call");
         mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
         // 讯飞君沟通处理楚曲圣误判1116
-        mAsr.setParameter(SpeechConstant.PARAMS, null);
         String contents = FucUtil.readFile(mContext, "userwords", "utf-8");
         ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
         if (ret != ErrorCode.SUCCESS) {
@@ -303,32 +299,21 @@ public class MainActivity extends Activity implements OnClickListener {
         // 语法识别音频CollinWang1019
         mAsr.setParameter(SpeechConstant.AUDIO_FORMAT, "pcm");
         boolean isOk = mAsr.setParameter(SpeechConstant.ASR_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/msc/asr.pcm");
-        if ("cloud".equalsIgnoreCase(VoiceCellApplication.mEngineType)) {
-            String grammarId = mSharedPreferences.getString(KEY_GRAMMAR_ABNF_ID, null);
-            if (TextUtils.isEmpty(grammarId)) {
-                result = false;
-            } else {
-                mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
-                mAsr.setParameter(SpeechConstant.CLOUD_GRAMMAR, grammarId);
-                result = true;
-            }
-        } else {
-            // 设置混合模式CollinWang1105
-            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mSwitch);
-            mAsr.setParameter("asr_sch", "1");
-            mAsr.setParameter(SpeechConstant.NLP_VERSION, "2.0");
-            mAsr.setParameter(SpeechConstant.RESULT_TYPE, "json");
-            mAsr.setParameter("mixed_type", "delay");//混合模式的类型delay延时优先云端
-            mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
-            mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
-            mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
-            mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
-            mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
-            // 前后端点CollinWang1029
-            mAsr.setParameter(SpeechConstant.VAD_BOS, "2000");
-            mAsr.setParameter(SpeechConstant.VAD_EOS, "1000");
-            result = true;
-        }
+        // 设置混合模式CollinWang1105
+        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, mSwitch);
+        mAsr.setParameter("asr_sch", "1");
+        mAsr.setParameter(SpeechConstant.NLP_VERSION, "2.0");
+        mAsr.setParameter(SpeechConstant.RESULT_TYPE, "json");
+        mAsr.setParameter("mixed_type", "delay");//混合模式的类型delay延时优先云端
+        mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+        mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+        mAsr.setParameter(SpeechConstant.RESULT_TYPE, mResultType);
+        mAsr.setParameter(SpeechConstant.LOCAL_GRAMMAR, "call");
+        mAsr.setParameter(SpeechConstant.MIXED_THRESHOLD, "40");
+        // 前后端点CollinWang1029
+        mAsr.setParameter(SpeechConstant.VAD_BOS, "2000");
+        mAsr.setParameter(SpeechConstant.VAD_EOS, "1000");
+        result = true;
         return result;
     }
 
@@ -337,7 +322,7 @@ public class MainActivity extends Activity implements OnClickListener {
         if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
-        } else {
+        } else if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_LOCAL)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
             mTts.setParameter(ResourceUtil.TTS_RES_PATH, getSpeechSynthesizerResourcePath());
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);
@@ -425,7 +410,14 @@ public class MainActivity extends Activity implements OnClickListener {
 
                 }
             } else if (error != null) {
-                showTip(error.getPlainDescription(true));
+                if (error.getErrorCode() == 20001) {
+                    showTip("当前是试用版不支持离线命令噢");
+                } else {
+                    showTip("错误码=" + error.getErrorCode());
+                }
+                Log.i("CollinWang", "error=" + error.getPlainDescription(true));
+                // 再次启动唤醒
+                mHandler.sendEmptyMessageDelayed(66666, 1000);
             }
         }
 
@@ -863,7 +855,7 @@ public class MainActivity extends Activity implements OnClickListener {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown" + " event Info : " + event.toString());
         // 如果音乐没有正在播放
-        if (!mAudioManager.isMusicActive()) {
+        if (mAudioManager != null && !mAudioManager.isMusicActive()) {
             // 如果来自 蓝牙眼镜，并且是 MEDIA_PLAY 按钮
             if (event.getDeviceId() == BLUETOOTH_GLASS) {
                 if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY) {
