@@ -143,7 +143,7 @@ public class PhoneReceiver extends BroadcastReceiver {
         if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
-        } else {
+        } else if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_LOCAL)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
             mTts.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath());
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);

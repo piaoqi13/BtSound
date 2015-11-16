@@ -52,7 +52,6 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
     private SharedPreferences mSharedPreferences = null;
     public static String voicerCloud = "xiaoyan";
     public static String voicerLocal = "xiaoyan";
-    private String mEngineType = SpeechConstant.TYPE_LOCAL;
     private int mPercentForBuffering = 0;
     private int mPercentForPlaying = 0;
     private Toast mToast = null;
@@ -135,7 +134,7 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
         Toast.makeText(AndroidCameraActivity.this, resultMessage, Toast.LENGTH_SHORT).show();
         finish();
         // Restart the preview and re-enable the shutter button so that we can take another picture
-        //        camera.startPreview();
+        // camera.startPreview();
     }
 
     private Bitmap convertBmp(Bitmap bmp) {
@@ -187,10 +186,10 @@ public class AndroidCameraActivity extends Activity implements OnClickListener, 
 
     private void setParam() {
         mTts.setParameter(SpeechConstant.PARAMS, null);
-        if (mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
+        if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_CLOUD)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerCloud);
-        } else {
+        } else if (VoiceCellApplication.mEngineType.equals(SpeechConstant.TYPE_LOCAL)) {
             mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
             mTts.setParameter(ResourceUtil.TTS_RES_PATH, getResourcePath());
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);
