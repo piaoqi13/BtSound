@@ -203,19 +203,15 @@ public class MainActivity extends Activity implements OnClickListener {
         mAsr = SpeechRecognizer.createRecognizer(this, mInitListener);
         mLocalLexicon = "王超\n刘雄斌\n蔡哥\n";
         mLocalGrammar = FucUtil.readFile(this, "call.bnf", "utf-8");
-        mCloudGrammar = FucUtil.readFile(this, "grammar_sample.abnf", "utf-8");
+        mCloudGrammar = FucUtil.readFile(this, "call.bnf", "utf-8");
         // 获取联系人、本地更新词典时使用
         ContactManager mgr = ContactManager.createManager(this, mContactListener);
         mgr.asyncQueryAllContactsName();
         mSharedPreferences = getSharedPreferences(getPackageName(), MODE_PRIVATE);
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
-        if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {
-            // 默认本地引擎构造语法更新词典
-            buildGrammar();
-            mHandler.sendEmptyMessageDelayed(4444, 1000);
-        } else {
-            Log.i("CollinWang","不是本地引擎");
-        }
+        // 默认本地引擎构造语法更新词典
+        buildGrammar();
+        mHandler.sendEmptyMessageDelayed(4444, 1000);
         // 短信播报广播注册
         mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
@@ -263,32 +259,47 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     private void buildGrammar() {
-        mContent = new String(mLocalGrammar);
-        mAsr.setParameter(SpeechConstant.PARAMS, null);
-        mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
-        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, VoiceCellApplication.mEngineType);
-        mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
-        mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
-        ret = mAsr.buildGrammar(GRAMMAR_TYPE_BNF, mContent, grammarListener);
-        if (ret != ErrorCode.SUCCESS) {
-            showTip("语法构建未成功");
+        if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_CLOUD) {
+            mContent = new String(mCloudGrammar);
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+            mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+            ret = mAsr.buildGrammar(GRAMMAR_TYPE_ABNF, mContent, grammarListener);
+            if (ret != ErrorCode.SUCCESS) {
+                showTip("语法构建未成功");
+            }
+        } else {
+            mContent = new String(mLocalGrammar);
+            mAsr.setParameter(SpeechConstant.PARAMS, null);
+            mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+            mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+            mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+            ret = mAsr.buildGrammar(GRAMMAR_TYPE_BNF, mContent, grammarListener);
+            if (ret != ErrorCode.SUCCESS) {
+                showTip("语法构建未成功");
+            }
         }
     }
 
     private void upDateDictionary() {
-        mContent = new String(mLocalLexicon);
-        mAsr.setParameter(SpeechConstant.PARAMS, null);
-        mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
-        mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
-        mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
-        mAsr.setParameter(SpeechConstant.GRAMMAR_LIST, "call");
-        mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
-        // 讯飞君沟通处理楚曲圣误判1116
-        String contents = FucUtil.readFile(mContext, "userwords", "utf-8");
-        ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
-        if (ret != ErrorCode.SUCCESS) {
-            showTip("更新词典未成功");
+        if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_CLOUD) {
+            Log.i("CollinWang", "引擎=CLOUD不更新词典");
+        } else {
+            mContent = new String(mLocalLexicon);
+            mAsr.setParameter(SpeechConstant.PARAMS, null);
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_LOCAL);
+            mAsr.setParameter(ResourceUtil.ASR_RES_PATH, getResourcePath());
+            mAsr.setParameter(ResourceUtil.GRM_BUILD_PATH, grmPath);
+            mAsr.setParameter(SpeechConstant.GRAMMAR_LIST, "call");
+            mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+            // 讯飞君沟通处理楚曲圣误判1116
+            String contents = FucUtil.readFile(mContext, "userwords", "utf-8");
+            ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
+            if (ret != ErrorCode.SUCCESS) {
+                showTip("更新词典未成功");
+            }
         }
+
         Log.i("CollinWang", "mContent=" + mContent);
     }
 
