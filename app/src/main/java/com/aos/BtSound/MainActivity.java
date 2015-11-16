@@ -18,6 +18,7 @@ import android.os.Message;
 import android.os.Vibrator;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -849,5 +850,65 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onDestroy();
         mAsr.cancel();
         mAsr.destroy();
+    }
+
+    // 蓝牙的 DeviceId 可能不是 0，这个打个 log 看一下
+    private static final int BLUETOOTH_GLASS = 0;
+    private boolean mIsRecording = false;
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+
+        DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown "
+                " event Info : " + event.toString() );
+
+        // 判断是否有 音乐在播放
+        // 如果音乐没有正在播放
+        if (!mAudioManager.isMusicActive()) {
+
+            // 如果来自 蓝牙眼镜，并且是 MEDIA_PLAY 按钮
+            if (event.getDeviceId() == BLUETOOTH_GLASS) {
+                if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY) {
+
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown " + "");
+
+                    try {
+                        beginRecord();
+                        mIsRecording = true;
+                    } catch (Exception e) {
+                        mIsRecording = false;
+                    } finally {
+
+                    }
+
+                    return true;
+                }
+
+                if (keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE) {
+
+                    DebugLog.d(DebugLog.TAG, "MainActivity:onKeyDown " + "");
+
+                    try {
+                        stopRecord();
+                    } catch (Exception e) {
+
+                    } finally {
+                        mIsRecording = false;
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return super.onKeyDown(keyCode, event);
+    }
+
+    private void stopRecord() throws Exception {
+
+    }
+
+    private void beginRecord() throws  Exception {
+
     }
 }
