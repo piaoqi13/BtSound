@@ -283,7 +283,15 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private void upDateDictionary() {
         if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_CLOUD) {
-            Log.i("CollinWang", "引擎=CLOUD不更新词典");
+            mContent = new String(mLocalLexicon);
+            mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+            mAsr.setParameter(SpeechConstant.TEXT_ENCODING, "utf-8");
+            // 讯飞君沟通处理楚曲圣误判1116
+            String contents = FucUtil.readFile(mContext, "userwords", "utf-8");
+            ret = mAsr.updateLexicon("contact", mContent, lexiconListener);
+            if (ret != ErrorCode.SUCCESS) {
+                showTip("更新词典未成功");
+            }
         } else {
             mContent = new String(mLocalLexicon);
             mAsr.setParameter(SpeechConstant.PARAMS, null);
