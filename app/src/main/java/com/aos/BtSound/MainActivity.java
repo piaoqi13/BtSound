@@ -497,17 +497,19 @@ public class MainActivity extends Activity implements OnClickListener {
                     if (JsonParser.isHaveCallOrText(result.getResultString())) {
                         text = JsonParser.parseMixNameResultText(result.getResultString());
                         if (text.contains("打电话")) {
-                            if (FucUtil.getNumber(text).length() > 0 && !FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
-                                mEdtTransformResult.setText(text);
-                                showTip("手机号码格式有误，请重新说出");
-                                mHandler.sendEmptyMessageDelayed(5, 1000);
-                            } else if (FucUtil.getNumber(text).length() > 0 && FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
-                                contact = FucUtil.getNumber(text);// 此时是数字号码
-                                mEdtTransformResult.setText(text.replace(contact, "【" + contact + "】"));
-                                Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
-                                MainActivity.this.startActivity(intent);
-                                mCallname = contact;
-                                mHandler.sendEmptyMessageDelayed(6, 1500);
+                            if (FucUtil.getNumber(text).length() > 0) {
+                                if (FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text)) || FucUtil.getNumber(text).length() != 11) {
+                                    contact = FucUtil.getNumber(text);// 此时是数字号码
+                                    mEdtTransformResult.setText(text.replace(contact, "【" + contact + "】"));
+                                    Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
+                                    MainActivity.this.startActivity(intent);
+                                    mCallname = contact;
+                                    mHandler.sendEmptyMessageDelayed(6, 1500);
+                                } else {
+                                    mEdtTransformResult.setText(text);
+                                    showTip("手机号码格式有误，请重新说出");
+                                    mHandler.sendEmptyMessageDelayed(5, 1000);
+                                }
                             } else {
                                 contact = JsonParser.parseMixNameResult(result.getResultString());
                                 mEdtTransformResult.setText(text.replaceAll("，", "").replaceAll("给", "").substring(0, text.lastIndexOf("话")) + "话给【" + contact + "】");
