@@ -458,7 +458,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 DebugLog.d(DebugLog.TAG, "语法构建成功");
             } else {
-                showTip("语法构建未成功，错误码：" + error.getErrorCode());
+                DebugLog.d(DebugLog.TAG, "语法构建未成功，错误码：" + error.getErrorCode());
             }
         }
     };
