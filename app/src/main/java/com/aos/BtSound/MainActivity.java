@@ -1,9 +1,11 @@
 package com.aos.BtSound;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -27,6 +29,7 @@ import android.widget.Toast;
 
 import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
 import com.aos.BtSound.contact.ObtainContactsUtil;
+import com.aos.BtSound.dialog.LoadingDialog;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.receiver.PhoneReceiver;
@@ -113,6 +116,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private String mCallname = "";                              // 即将呼叫的联系人
 
     private final String mSwitch = SpeechConstant.TYPE_CLOUD;   // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
+    private LoadingDialog mLoading = null;                      // 加载对话框
 
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -144,7 +148,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     findViewById(R.id.btn_recorder).setClickable(true);
                     mWantToRecord = false;
                     break;
-                case 4:
+                case 2:
                     mEdtTransformResult.setText("正在录音...");
                     mMyMediaRecorder = new MyMediaRecorder();
                     mMyMediaRecorder.startRecording();
@@ -155,23 +159,17 @@ public class MainActivity extends Activity implements OnClickListener {
                         }
                     });
                     break;
-                case 2:
+                case 3:
                     mSoundPool.release();
                     break;
-                case 4444:
+                case 4:
                     upDateDictionary();
                     break;
-                case 6666:
-                    showTip("语义理解失败,错误码:" + ret);
-                    break;
-                case 8888:
-                    showTip(getString(R.string.text_begin));
-                    break;
-                case 66666:
+                case 5:
                     mEdtTransformResult.setText("Speak Result");
                     wakeUpStart();
                     break;
-                case 44444:
+                case 6:
                     mIndex = 1;
                     setSpeechSynthesizerParam();
                     int code = mTts.startSpeaking("正在打电话给" + mCallname, mTtsListener);
@@ -211,7 +209,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mToast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
         // 默认本地引擎构造语法更新词典
         buildGrammar();
-        mHandler.sendEmptyMessageDelayed(4444, 1000);
+        mHandler.sendEmptyMessageDelayed(4, 1000);
         // 短信播报广播注册
         mContentObserver = new SMSReceiver(mHandler, this, mBluetoothHelper);
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
@@ -282,6 +280,8 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     private void upDateDictionary() {
+        mLoading = new LoadingDialog(mContext);
+        mLoading.showDialog("正在上传通讯录...");
         if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_CLOUD) {
             mContent = new String(mLocalLexicon);
             mAsr.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
@@ -347,7 +347,7 @@ public class MainActivity extends Activity implements OnClickListener {
             mTts.setParameter(SpeechConstant.VOICE_NAME, voicerLocal);
         }
         mSharedPreferences = this.getSharedPreferences(TtsSettings.PREFER_NAME, Activity.MODE_PRIVATE);
-        mTts.setParameter(SpeechConstant.SPEED, mSharedPreferences.getString("speed_preference", "50"));
+        mTts.setParameter(SpeechConstant.SPEED, mSharedPreferences.getString("speed_preference", "40"));
         mTts.setParameter(SpeechConstant.PITCH, mSharedPreferences.getString("pitch_preference", "50"));
         mTts.setParameter(SpeechConstant.VOLUME, mSharedPreferences.getString("volume_preference", "50"));
         mTts.setParameter(SpeechConstant.STREAM_TYPE, mSharedPreferences.getString("stream_preference", "3"));
@@ -370,10 +370,11 @@ public class MainActivity extends Activity implements OnClickListener {
     private LexiconListener lexiconListener = new LexiconListener() {
         @Override
         public void onLexiconUpdated(String lexiconId, SpeechError error) {
+            mLoading.dismiss();
             if (error == null) {
                 DebugLog.d(DebugLog.TAG, "词典更新成功");
             } else {
-                showTip("词典更新未成功，错误码：" + error.getErrorCode());
+                showTipDialog("上传通讯录未成功，请检查网络确定重试");
             }
         }
     };
@@ -436,7 +437,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 Log.i("CollinWang", "error=" + error.getPlainDescription(true));
                 // 再次启动唤醒
-                mHandler.sendEmptyMessageDelayed(66666, 1000);
+                mHandler.sendEmptyMessageDelayed(5, 1000);
             }
         }
 
@@ -499,14 +500,14 @@ public class MainActivity extends Activity implements OnClickListener {
                             if (FucUtil.getNumber(text).length() > 0 && !FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
                                 mEdtTransformResult.setText(text);
                                 showTip("手机号码格式有误，请重新说出");
-                                mHandler.sendEmptyMessageDelayed(66666, 1000);
+                                mHandler.sendEmptyMessageDelayed(5, 1000);
                             } else if (FucUtil.getNumber(text).length() > 0 && FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
                                 mEdtTransformResult.setText(text);
                                 contact = FucUtil.getNumber(text);// 此时是数字号码
                                 Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
                                 MainActivity.this.startActivity(intent);
                                 mCallname = contact;
-                                mHandler.sendEmptyMessageDelayed(44444, 1500);
+                                mHandler.sendEmptyMessageDelayed(6, 1500);
                             } else {
                                 contact = JsonParser.parseMixNameResult(result.getResultString());
                                 mEdtTransformResult.setText(text.replaceAll("，", "").replaceAll("给", "").substring(0, text.lastIndexOf("话")) + "话给【" + contact + "】");
@@ -516,18 +517,18 @@ public class MainActivity extends Activity implements OnClickListener {
                                             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                                             MainActivity.this.startActivity(intent);
                                             mCallname = VoiceCellApplication.mContacts.get(i).getName();
-                                            mHandler.sendEmptyMessageDelayed(44444, 500);
+                                            mHandler.sendEmptyMessageDelayed(6, 500);
                                             break;
                                         } else {
                                             Log.i("CollinWang", "要拨打联系人没有对应号码噢");
                                             showTip("要拨打联系人没有对应号码噢");
-                                            mHandler.sendEmptyMessageDelayed(66666, 1000);
+                                            mHandler.sendEmptyMessageDelayed(5, 1000);
                                         }
                                     } else {
                                         if (i == VoiceCellApplication.mContacts.size() - 1) {
                                             Log.i("CollinWang", "没有找到此联系人噢");
                                             showTip("没有找到此联系人噢");
-                                            mHandler.sendEmptyMessageDelayed(66666, 1000);
+                                            mHandler.sendEmptyMessageDelayed(5, 1000);
                                         }
                                     }
                                 }
@@ -560,7 +561,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             } else {
                                 DebugLog.i("CollinWang", "code=" + code);
                             }
-                            mHandler.sendEmptyMessage(4);
+                            mHandler.sendEmptyMessage(2);
                         }
 
                     } else {// 离线命令词
@@ -574,7 +575,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                         Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + VoiceCellApplication.mContacts.get(i).getPhoneNumber()));
                                         MainActivity.this.startActivity(intent);
                                         mCallname = VoiceCellApplication.mContacts.get(i).getName();
-                                        mHandler.sendEmptyMessageDelayed(44444, 1500);
+                                        mHandler.sendEmptyMessageDelayed(6, 1500);
                                         break;
                                     } else {
                                         Log.i("CollinWang", "要拨打联系人没有对应号码噢");
@@ -624,7 +625,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             } else {
                                 DebugLog.i("CollinWang", "code=" + code);
                             }
-                            mHandler.sendEmptyMessage(4);
+                            mHandler.sendEmptyMessage(2);
                         }
                     }
                     Log.i("CollinWang", "text=" + text);
@@ -657,7 +658,7 @@ public class MainActivity extends Activity implements OnClickListener {
             } else {
                 showTip("错误码=" + error.getErrorCode());
             }
-            mHandler.sendEmptyMessageDelayed(66666, 1000);
+            mHandler.sendEmptyMessageDelayed(5, 1000);
         }
 
         @Override
@@ -782,7 +783,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 mIsWakeUpStarted = false;
 
                 if (mWantToRecord)
-                    mHandler.sendEmptyMessage(4);
+                    mHandler.sendEmptyMessage(2);
             }
 
             @Override
@@ -799,7 +800,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 语音提示唤醒成功CollinWang1101
                     mIndex = 0;
                     setSpeechSynthesizerParam();
-                    int code = mTts.startSpeaking("傲石语音已唤醒，请说指令", mTtsListener);
+                    int code = mTts.startSpeaking("傲石语音已唤醒，请说指令……", mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
                         showTip("语音合成失败,错误码: " + code);
                     } else {
@@ -912,5 +913,28 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private void beginRecord() throws Exception {
 
+    }
+
+    protected void showTipDialog(String tip) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+        builder.setMessage(tip);
+        builder.setTitle("温馨提示");
+
+        builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                upDateDictionary();
+            }
+        });
+
+        builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        builder.create().show();
     }
 }
