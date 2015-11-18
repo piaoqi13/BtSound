@@ -502,8 +502,8 @@ public class MainActivity extends Activity implements OnClickListener {
                                 showTip("手机号码格式有误，请重新说出");
                                 mHandler.sendEmptyMessageDelayed(5, 1000);
                             } else if (FucUtil.getNumber(text).length() > 0 && FucUtil.isAvailableMobilePhone(FucUtil.getNumber(text))) {
-                                mEdtTransformResult.setText(text);
                                 contact = FucUtil.getNumber(text);// 此时是数字号码
+                                mEdtTransformResult.setText(text.replace(contact, "【" + contact + "】"));
                                 Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + contact));
                                 MainActivity.this.startActivity(intent);
                                 mCallname = contact;
