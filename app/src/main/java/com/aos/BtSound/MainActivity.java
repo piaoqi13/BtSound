@@ -84,8 +84,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private Vibrator mVibrator = null;                          // 唤醒震动
 
     private int mStartCount = 0;                                // 尝试打开蓝牙麦克风次数
-    private ContentObserver mContentObserver = null;
-    private PhoneReceiver mPhoneReceiver = null;
+    private ContentObserver mContentObserver = null;            // 短信内容广播
+    private PhoneReceiver mPhoneReceiver = null;                // 来电播报广播
     private boolean mIsWakeUpStarted = false;                   // 跟踪语音唤醒是否开启
     private SpeechRecognizer mAsr = null;                       // 语音识别对象
     private Toast mToast = null;                                // 吐司提示
@@ -105,7 +105,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private int ret = 0;                                        // 函数回值
 
     private MyMediaRecorder mMyMediaRecorder;                   // 录音器
-    private boolean mWantToRecord;
+    private boolean mWantToRecord;                              // 是否录音标识
 
     private SpeechSynthesizer mTts = null;                      // 语音合成对象
     public static String voicerCloud = "xiaoyan";               // 默认云端发音人
@@ -564,7 +564,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             mHandler.sendEmptyMessage(2);
                         }
 
-                    } else {// 离线命令词
+                    } else if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {// 离线命令词
                         text = JsonParser.parseGrammarResult(result.getResultString(), VoiceCellApplication.mEngineType);
                         if (text.contains("打电话") && VoiceCellApplication.mSc > 55) {
                             mEdtTransformResult.setText(text);
@@ -627,6 +627,9 @@ public class MainActivity extends Activity implements OnClickListener {
                             }
                             mHandler.sendEmptyMessage(2);
                         }
+                    } else {
+                        showTip("非法指令，请阅读软件说明后再尝试！");
+                        mHandler.sendEmptyMessageDelayed(5, 1000);
                     }
                     Log.i("CollinWang", "text=" + text);
                 }
