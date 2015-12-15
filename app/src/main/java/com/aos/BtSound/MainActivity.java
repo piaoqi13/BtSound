@@ -70,6 +70,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button mBtnWeb = null;
     private Button mBtnSettings = null;
     private Button mBtnInstruction = null;
+    private Button mBtnRecorder = null;
     private EditText mEdtTransformResult = null;
 
     private SpeechRecognizer mSpeechRecognizer = null;          // 语音对象
@@ -118,6 +119,9 @@ public class MainActivity extends Activity implements OnClickListener {
     private final String mSwitch = SpeechConstant.TYPE_CLOUD;   // 客户TYPE_MIX和非客户TYPE_CLOUD是否支持离线开关
     private LoadingDialog mLoading = null;                      // 加载对话框
 
+    private boolean isRecording = false;                        // 是否正在录音
+    private long mExitTime = 0;                                 // 双击退出时间
+
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -126,6 +130,8 @@ public class MainActivity extends Activity implements OnClickListener {
                         showSoundHint();
                     break;
                 case 1:
+                    isRecording = false;
+                    mBtnRecorder.setText("录音");
                     // 停止录音；
                     mMyMediaRecorder.stopRecording();
                     showTip("录音结束");
@@ -145,17 +151,19 @@ public class MainActivity extends Activity implements OnClickListener {
                     }
                     mEdtTransformResult.setText("Speak Result");
                     mWakeUpRecognizer.start();// 重新开启唤醒
-                    findViewById(R.id.btn_recorder).setClickable(true);
+                    //findViewById(R.id.btn_recorder).setClickable(true);
                     mWantToRecord = false;
                     break;
                 case 2:
+                    isRecording = true;
+                    mBtnRecorder.setText("停止录音");
                     mEdtTransformResult.setText("正在录音...");
                     mMyMediaRecorder = new MyMediaRecorder();
                     mMyMediaRecorder.startRecording();
-                    mHandler.sendEmptyMessageDelayed(1, 10 * 1000);
+                    mHandler.sendEmptyMessageDelayed(1, 60 * 60 * 1000);
                     runOnUiThread(new Runnable() {
                         public void run() {
-                            showTip("正在录音，10s钟后自动结束");
+                            showTip("正在录音，60分钟后自动结束");
                         }
                     });
                     break;
@@ -187,10 +195,11 @@ public class MainActivity extends Activity implements OnClickListener {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mContext = this;
+        mAudioManager = (AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
         // 震动和蓝牙
         mVibrator = (Vibrator) getSystemService(Service.VIBRATOR_SERVICE);
         mBluetoothHelper = new BluetoothHelper(this);
-        mContext = this;
         initView();
         setListener();
         // 获取联系人信息
@@ -215,6 +224,10 @@ public class MainActivity extends Activity implements OnClickListener {
         getContentResolver().registerContentObserver(Uri.parse("content://sms/"), true, mContentObserver);
         // 初始化合成对象
         mTts = SpeechSynthesizer.createSynthesizer(this, mTtsInitListener);
+        // 蓝牙按键广播注册
+        //MediaButtonReceiver mBtnReceiver = new MediaButtonReceiver();
+        //IntentFilter ittFilterButton = new IntentFilter(Intent.ACTION_MEDIA_BUTTON);
+        //registerReceiver(mBtnReceiver, ittFilterButton);
     }
 
     @Override
@@ -242,6 +255,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnWeb = (Button) findViewById(R.id.btn_web);
         mBtnInstruction = (Button) findViewById(R.id.btn_instruction);
         mBtnSettings = (Button) findViewById(R.id.btn_settings);
+        mBtnRecorder = (Button) findViewById(R.id.btn_recorder);
         mEdtTransformResult = (EditText) findViewById(R.id.edt_result_text);
         mSharedPreferences = getSharedPreferences(IatSettings.PREFER_NAME, Activity.MODE_PRIVATE);
     }
@@ -253,7 +267,7 @@ public class MainActivity extends Activity implements OnClickListener {
         mBtnWeb.setOnClickListener(this);
         mBtnSettings.setOnClickListener(this);
         mBtnInstruction.setOnClickListener(this);
-        findViewById(R.id.btn_recorder).setOnClickListener(this);
+        mBtnRecorder.setOnClickListener(this);
     }
 
     private void buildGrammar() {
@@ -699,10 +713,14 @@ public class MainActivity extends Activity implements OnClickListener {
                 MainActivity.this.startActivity(intent);
                 break;
             case R.id.btn_recorder:
-                mWakeUpRecognizer.stop();
-                mAsr.stopListening();
-                mWantToRecord = true;
-                findViewById(R.id.btn_recorder).setClickable(false);
+                // CollinWang2015.12.15
+                if (isRecording) {
+                    mHandler.sendEmptyMessage(1);
+                } else {
+                    mWakeUpRecognizer.stop();
+                    mAsr.stopListening();
+                    mWantToRecord = true;
+                }
                 break;
             case R.id.btn_web:
                 openWeb();
@@ -805,7 +823,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     // 语音提示唤醒成功CollinWang1101
                     mIndex = 0;
                     setSpeechSynthesizerParam();
-                    int code = mTts.startSpeaking("傲石语音已唤醒，请说指令……", mTtsListener);
+                    int code = mTts.startSpeaking("你好，请说指令……", mTtsListener);
                     if (code != ErrorCode.SUCCESS) {
                         showTip("语音合成失败,错误码: " + code);
                     } else {
@@ -866,6 +884,28 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+            return doubleClickToExit();
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    private boolean doubleClickToExit() {
+        if (isRecording) {
+            showTip("正在录音，请停止录音！");
+        } else {
+            if ((System.currentTimeMillis() - mExitTime) > 2000) {
+                Toast.makeText(this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
+                mExitTime = System.currentTimeMillis();
+            } else {
+                finish();
+            }
+        }
+        return true;
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         mAsr.cancel();
@@ -873,7 +913,7 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     // 蓝牙的 DeviceId 可能不是 0，这个打个 log 看一下
-    private static final int BLUETOOTH_GLASS = 0;
+    private static final int BLUETOOTH_GLASS = 11;
     private boolean mIsRecording = false;
 
     @Override
@@ -908,16 +948,18 @@ public class MainActivity extends Activity implements OnClickListener {
                     return true;
                 }
             }
+        } else {
+            DebugLog.d(DebugLog.TAG, "mAudioManager=" + mAudioManager);
         }
         return super.onKeyDown(keyCode, event);
     }
 
     private void stopRecord() throws Exception {
-
+        DebugLog.d(DebugLog.TAG, "停止录音");
     }
 
     private void beginRecord() throws Exception {
-
+        DebugLog.d(DebugLog.TAG, "开始录音");
     }
 
     protected void showTipDialog(String tip) {
