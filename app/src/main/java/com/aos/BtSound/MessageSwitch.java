@@ -2,11 +2,14 @@ package com.aos.BtSound;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,6 +35,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     private Button mBtnOpen = null;
     private ListView mLvRecord = null;
     private List<RecordFileInfo> mRecords = null;//语音记事集合
+    private RecordAdapter mRecordAdapter = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +79,8 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                 mRecords.add(new RecordFileInfo(file.getName(), file.getPath()));
             }
         }
-        mLvRecord.setAdapter(new RecordAdapter(this, mRecords));
+        mRecordAdapter = new RecordAdapter(this, mRecords);
+        mLvRecord.setAdapter(mRecordAdapter);
     }
 
     private void initListener() {
@@ -162,6 +167,42 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                     startActivity(it);
                 }
             });
+
+            holder.mTvName.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+                    builder.setMessage("确定要删除记录？");
+                    builder.setTitle("温馨提示");
+
+                    builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            File file = new File(mRecords.get(position).getFilePath());
+                            Log.i("CollinWang","file path=" + file.getPath());
+                            if (file.exists()) {
+                                mRecords.remove(position);
+                                boolean result = file.delete();
+                                Log.i("CollinWang","result=" + result);
+                            }
+                            mRecordAdapter.notifyDataSetChanged();
+                            Log.i("CollinWang", "notify run");
+                            dialog.dismiss();
+                        }
+                    });
+
+                    builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+
+                    builder.create().show();
+                    return false;
+                }
+            });
+
             return convertView;
         }
 
