@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aos.BtSound"
-    android:versionCode="4"
+    android:versionCode="1"
     android:versionName="1.0">
 
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
@@ -36,10 +36,10 @@
         android:name="com.aos.BtSound.VoiceCellApplication"
         android:allowBackup="true"
         android:label="@string/app_name_test"
-        android:theme="@android:style/Theme.Holo.Light">
+        android:theme="@android:style/Theme.Light.NoTitleBar" >
 
         <activity
-            android:name="com.aos.BtSound.MainActivity"
+            android:name="com.aos.BtSound.IndexActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name">
             <intent-filter>
@@ -82,6 +82,10 @@
 
         <activity
             android:name="com.aos.BtSound.AndroidCameraActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"> </activity>
+        <activity
+            android:name="com.aos.BtSound.LuYinActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"> </activity>
 

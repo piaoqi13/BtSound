@@ -150,8 +150,7 @@ public class MainActivity extends Activity implements OnClickListener {
                         DebugLog.i("CollinWang", "code=" + code2);
                     }
                     mEdtTransformResult.setText("Speak Result");
-                    mWakeUpRecognizer.start();// 重新开启唤醒
-                    //findViewById(R.id.btn_recorder).setClickable(true);
+                    mWakeUpRecognizer.start();
                     mWantToRecord = false;
                     break;
                 case 2:
@@ -186,6 +185,22 @@ public class MainActivity extends Activity implements OnClickListener {
                     } else {
                         DebugLog.i("CollinWang", "code=" + code);
                     }
+                    break;
+                case 7:
+                    // 停止蓝牙CollinWang0114
+                    if (mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
+                        mBluetoothHelper.stop();
+                    }
+                    mVibrator.vibrate(5000);
+                    setSpeechSynthesizerParam();
+                    int code7 = mTts.startSpeaking("蓝牙已断开，请检查连接！", mTtsListener);
+                    if (code7 != ErrorCode.SUCCESS) {
+                        showTip("语音合成失败,错误码: " + code7);
+                    } else {
+                        DebugLog.i("CollinWang", "code=" + code7);
+                    }
+                    mWakeUpRecognizer.start();
+                    DebugLog.i("CollinWang", "蓝牙断开");
                     break;
             }
         }
@@ -875,6 +890,7 @@ public class MainActivity extends Activity implements OnClickListener {
         @Override
         public void onHeadsetDisconnected() {
             DebugLog.d(DebugLog.TAG, "BluetoothHelper:onHeadsetDisconnected " + "");
+            mHandler.sendEmptyMessageDelayed(7, 1000);
         }
 
         @Override

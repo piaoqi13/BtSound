@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,6 +37,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     private ListView mLvRecord = null;
     private List<RecordFileInfo> mRecords = null;//语音记事集合
     private RecordAdapter mRecordAdapter = null;
+    private ImageView mIvBack = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +52,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
         mBtnClosed = (Button) findViewById(R.id.btn_closed);
         mBtnOpen = (Button) findViewById(R.id.btn_open);
         mLvRecord = (ListView) findViewById(R.id.lv_record_file);
+        mIvBack = (ImageView) findViewById(R.id.iv_back);
     }
 
     private void initData() {
@@ -86,6 +89,7 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
     private void initListener() {
         mBtnClosed.setOnClickListener(this);
         mBtnOpen.setOnClickListener(this);
+        mIvBack.setOnClickListener(this);
     }
 
     @Override
@@ -110,6 +114,9 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
                 mBtnClosed.setEnabled(true);
                 mBtnClosed.setTextColor(this.getResources().getColor(R.color.black_text));
                 Toast.makeText(this, "已打开", Toast.LENGTH_LONG).show();
+                break;
+            case R.id.iv_back:
+                finish();
                 break;
         }
     }
