@@ -20,6 +20,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.model.RecordFileInfo;
 import com.aos.BtSound.preference.Config;
 import com.aos.BtSound.preference.Settings;
@@ -76,14 +77,19 @@ public class MessageSwitch extends Activity implements View.OnClickListener {
         String imagePath = Environment.getExternalStorageDirectory().toString() + "/audio";
         File mfile = new File(imagePath);
         File[] files = mfile.listFiles();
-        for (int i = 0; i < files.length; i++) {
-            File file = files[i];
-            if (file.getPath().endsWith(".mp3")) {
-                mRecords.add(new RecordFileInfo(file.getName(), file.getPath()));
+        if (files != null && files.length > 0) {
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                if (file.getPath().endsWith(".mp3")) {
+                    mRecords.add(new RecordFileInfo(file.getName(), file.getPath()));
+                }
             }
+            mRecordAdapter = new RecordAdapter(this, mRecords);
+            mLvRecord.setAdapter(mRecordAdapter);
+        } else {
+            DebugLog.i("CollinWang", "语音记事=" + files);
         }
-        mRecordAdapter = new RecordAdapter(this, mRecords);
-        mLvRecord.setAdapter(mRecordAdapter);
+
     }
 
     private void initListener() {

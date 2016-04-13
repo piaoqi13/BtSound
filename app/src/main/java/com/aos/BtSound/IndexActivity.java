@@ -541,22 +541,8 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                             Intent intent = new Intent(IndexActivity.this, AndroidCameraActivity.class);
                             IndexActivity.this.startActivity(intent);
                         } else if (text.contains("录音")) {
-                            mAsr.stopListening();
-                            // 停蓝牙CollinWang1101
-                            if (mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
-                                mBluetoothHelper.stop();
-                            }
-                            mWakeUpRecognizer.stop();
-                            // 语音提示唤醒成功CollinWang1101
-                            mIndex = 3;
-                            setSpeechSynthesizerParam();
-                            int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
-                            if (code != ErrorCode.SUCCESS) {
-                                showTip("语音合成失败,错误码: " + code);
-                            } else {
-                                DebugLog.i("CollinWang", "code=" + code);
-                            }
-                            mHandler.sendEmptyMessage(2);
+                            Intent intent = new Intent(IndexActivity.this, LuYinActivity.class);
+                            IndexActivity.this.startActivity(intent);
                         }
 
                     } else if (VoiceCellApplication.mEngineType == SpeechConstant.TYPE_LOCAL) {// 离线命令词
@@ -605,22 +591,8 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                             DebugLog.d(DebugLog.TAG, "得分小于60走噪音误判拍照else分支");
                             wakeUpStart();
                         } else if (text.contains("录音") && VoiceCellApplication.mSc > 60) {
-                            mAsr.stopListening();
-                            // 停蓝牙CollinWang1101
-                            if (mBluetoothHelper != null && mBluetoothHelper.isOnHeadsetSco()) {
-                                mBluetoothHelper.stop();
-                            }
-                            mWakeUpRecognizer.stop();
-                            // 语音提示唤醒成功CollinWang1101
-                            mIndex = 3;
-                            setSpeechSynthesizerParam();
-                            int code = mTts.startSpeaking("开始语音记事，请说话", mTtsListener);
-                            if (code != ErrorCode.SUCCESS) {
-                                showTip("语音合成失败,错误码: " + code);
-                            } else {
-                                DebugLog.i("CollinWang", "code=" + code);
-                            }
-                            mHandler.sendEmptyMessage(2);
+                            Intent intent = new Intent(IndexActivity.this, LuYinActivity.class);
+                            IndexActivity.this.startActivity(intent);
                         }
                     } else {
                         showTip("非法指令，请阅读软件说明后再尝试！");

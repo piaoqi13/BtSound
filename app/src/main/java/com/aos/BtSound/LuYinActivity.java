@@ -30,7 +30,6 @@ public class LuYinActivity extends Activity implements View.OnClickListener {
     private TextView mTvState = null;
     private ImageView mIvBack = null;
 
-
     private MyMediaRecorder mMyMediaRecorder;                   // 录音器
     private boolean mWantToRecord;                              // 是否录音标识
     private boolean isRecording = false;                        // 是否正在录音
