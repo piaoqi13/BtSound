@@ -4,4 +4,5 @@
     <color name="gray_text">#666666</color>
     <color name="black_text">#000000</color>
     <color name="green_background">#45ee4d</color>
+    <color name="title_red">#C5171E</color>
 </resources>

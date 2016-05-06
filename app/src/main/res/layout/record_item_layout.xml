@@ -14,6 +14,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingBottom="1dp"
+        android:textColor="@color/title_red"
         android:paddingTop="1dp"
         android:text="飘奇"/>
 

@@ -2,17 +2,25 @@
               xmlns:tools="http://schemas.android.com/tools"
               android:layout_width="fill_parent"
               android:layout_height="fill_parent"
-              android:background="@drawable/sky"
               android:orientation="vertical">
 
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="40dp"
+        android:text=""
+        android:background="@color/title_red"/>
     <ScrollView
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        >
 
         <LinearLayout
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
 
             <TextView
                 android:layout_width="fill_parent"
@@ -20,6 +28,7 @@
                 android:layout_marginTop="10dp"
                 android:gravity="center_horizontal"
                 android:text="傲石语音助手使用说明"
+                android:textColor="@color/title_red"
                 android:textSize="15sp"
                 android:textStyle="bold"/>
 
@@ -28,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="【特别提醒：1、语音命令要求普通话标准、清晰、大声；2、按标准人名整理通讯录，语音拨号人名与通讯录要完全匹配】"
-                android:textColor="#ff3803"
+                android:textColor="@color/title_red"
                 android:textSize="15sp"
                 android:textStyle="bold"/>
 
@@ -37,9 +46,23 @@
                 android:id="@+id/tv_instruction"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/title_red"
                 android:text="@string/instruction"/>
         </LinearLayout>
     </ScrollView>
-
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="55dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|right"
+        android:background="@color/title_red">
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/back_logo"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="10dp"/>
+    </LinearLayout>
 
 </LinearLayout>
