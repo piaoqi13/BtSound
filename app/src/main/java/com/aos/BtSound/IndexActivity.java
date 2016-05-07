@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.aos.BtSound.bluetooth.BluetoothHeadsetUtils;
@@ -32,6 +33,7 @@ import com.aos.BtSound.contact.ObtainContactsUtil;
 import com.aos.BtSound.dialog.LoadingDialog;
 import com.aos.BtSound.log.DebugLog;
 import com.aos.BtSound.preference.Config;
+import com.aos.BtSound.preference.Settings;
 import com.aos.BtSound.receiver.PhoneReceiver;
 import com.aos.BtSound.receiver.SMSReceiver;
 import com.aos.BtSound.setting.TtsSettings;
@@ -68,6 +70,14 @@ public class IndexActivity extends Activity implements View.OnClickListener {
     private LinearLayout mLlSetting = null;
     private LinearLayout mLlWenTi = null;
     private LinearLayout mLlGuanWang = null;
+
+    // 0507线上版本UI修改
+    private LinearLayout mLlOperationIllustrate = null;
+    private LinearLayout mLlMessageSwitch = null;
+    private LinearLayout mLlKeepRecord = null;
+    private ImageView mIvSwitchOpen = null;
+    private TextView mTvSwitchOpen = null;
+    private LinearLayout mLlOfficialWebsite = null;
 
     private EditText mEdtTransformResult = null;
 
@@ -218,6 +228,14 @@ public class IndexActivity extends Activity implements View.OnClickListener {
         mLlSetting = (LinearLayout) findViewById(R.id.ll_setting);
         mLlWenTi = (LinearLayout) findViewById(R.id.ll_wenti);
         mLlGuanWang = (LinearLayout) findViewById(R.id.ll_website);
+
+        //0507修改UI
+        mLlOperationIllustrate = (LinearLayout) findViewById(R.id.ll_operation_illustrate);
+        mLlMessageSwitch = (LinearLayout) findViewById(R.id.ll_message_switch);
+        mIvSwitchOpen = (ImageView) findViewById(R.id.iv_message_switch);
+        mTvSwitchOpen = (TextView) findViewById(R.id.tv_message_switch);
+        mLlKeepRecord = (LinearLayout) findViewById(R.id.ll_keep_record);
+        mLlOfficialWebsite = (LinearLayout) findViewById(R.id.ll_official_website);
     }
 
     private void setListener() {
@@ -229,6 +247,11 @@ public class IndexActivity extends Activity implements View.OnClickListener {
         mLlSetting.setOnClickListener(this);
         mLlWenTi.setOnClickListener(this);
         mLlGuanWang.setOnClickListener(this);
+        // 0507修改UI
+        mLlOperationIllustrate.setOnClickListener(this);
+        mLlMessageSwitch.setOnClickListener(this);
+        mLlKeepRecord.setOnClickListener(this);
+        mLlOfficialWebsite.setOnClickListener(this);
     }
 
     @Override
@@ -426,7 +449,7 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                 if (error.getErrorCode() == 20001) {
                     showTip("当前是试用版不支持离线命令噢");
                 } else {
-                    showTip("错误码=" + error.getErrorCode());
+                    showTip("错误原因=" + error.getErrorDescription());
                 }
                 Log.i("CollinWang", "error=" + error.getPlainDescription(true));
                 // 再次启动唤醒
@@ -451,7 +474,7 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                 }
                 DebugLog.d(DebugLog.TAG, "语法构建成功");
             } else {
-                DebugLog.d(DebugLog.TAG, "语法构建未成功，错误码：" + error.getErrorCode());
+                DebugLog.d(DebugLog.TAG, "语法构建未成功，错误原因：" + error.getErrorDescription());
             }
         }
     };
@@ -622,11 +645,11 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                 return;
             }
 
-            DebugLog.i("CollinWang", "onError Code：" + error.getErrorCode());
+            DebugLog.i("CollinWang", "onError Code：" + error.getErrorDescription());
             if (error.getErrorCode() == 20001) {
                 showTip("当前是试用版不支持离线命令噢");
             } else {
-                showTip("错误码=" + error.getErrorCode());
+                showTip("错误原因=" + error.getErrorDescription());
             }
             mHandler.sendEmptyMessageDelayed(5, 1000);
         }
@@ -934,11 +957,13 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                 IndexActivity.this.startActivity(intent4);
                 break;
             case R.id.ll_setting:
+            case R.id.ll_keep_record:
                 // ToDo
                 Intent intent3 = new Intent(IndexActivity.this, MessageSwitch.class);
                 IndexActivity.this.startActivity(intent3);
                 break;
             case R.id.ll_wenti:
+            case R.id.ll_operation_illustrate:
                 // ToDo
                 Intent intent2 = new Intent(IndexActivity.this, InstructionActivity.class);
                 startActivity(intent2);
@@ -947,7 +972,21 @@ public class IndexActivity extends Activity implements View.OnClickListener {
                 // ToDo
                 openWeb();
                 break;
-
+            case R.id.ll_official_website:
+                Intent intent5 = new Intent(IndexActivity.this, WebSiteActivity.class);
+                startActivity(intent5);
+                break;
+            case R.id.ll_message_switch:
+                if (Settings.getBoolean(Config.IS_READ_SMS, true, false)) {
+                    Settings.setBoolean(Config.IS_READ_SMS, false, false);
+                    mIvSwitchOpen.setBackgroundResource(R.drawable.message_switch_closed);
+                    mTvSwitchOpen.setText("短播关闭");
+                } else {
+                    Settings.setBoolean(Config.IS_READ_SMS, true, false);
+                    mIvSwitchOpen.setBackgroundResource(R.drawable.message_switch_open);
+                    mTvSwitchOpen.setText("短信播报");
+                }
+                break;
         }
     }
 }

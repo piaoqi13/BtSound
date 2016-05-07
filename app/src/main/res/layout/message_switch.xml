@@ -2,14 +2,14 @@
               xmlns:tools="http://schemas.android.com/tools"
               android:layout_width="fill_parent"
               android:layout_height="fill_parent"
-              android:gravity="center_horizontal"
-              android:orientation="vertical" >
+              android:orientation="vertical">
 
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="40dp"
+        android:background="@color/title_red"
         android:text=""
-        android:background="@color/title_red"/>
+        android:visibility="gone"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -17,14 +17,16 @@
         android:layout_marginTop="15dp"
         android:text="短信播报开关"
         android:textColor="@color/title_red"
-        android:textSize="20sp"/>
+        android:textSize="20sp"
+        android:visibility="gone"/>
 
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="15dp"
         android:gravity="center_horizontal"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <Button
             android:id="@+id/btn_closed"
@@ -51,6 +53,9 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
         android:layout_marginTop="15dp"
         android:text="语音记事列表"
         android:textColor="@color/title_red"
@@ -63,19 +68,21 @@
         android:layout_weight="1">
 
     </ListView>
+
     <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="55dp"
-        android:orientation="horizontal"
+        android:background="@color/title_red"
         android:gravity="center_vertical|right"
-        android:background="@color/title_red">
+        android:orientation="horizontal">
+
         <ImageView
             android:id="@+id/iv_back"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:background="@drawable/back_logo"
             android:layout_marginLeft="20dp"
-            android:layout_marginRight="10dp"/>
+            android:layout_marginRight="10dp"
+            android:background="@drawable/back_logo"/>
     </LinearLayout>
 
 </LinearLayout>
